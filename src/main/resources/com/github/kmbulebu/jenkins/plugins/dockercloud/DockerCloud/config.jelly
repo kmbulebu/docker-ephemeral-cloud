@@ -9,6 +9,8 @@
         <f:textbox default="10"/>
     </f:entry>
     
+    <f:property field="server"/>
+    
     <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="instanceCapStr" />
     
 </j:jelly>
