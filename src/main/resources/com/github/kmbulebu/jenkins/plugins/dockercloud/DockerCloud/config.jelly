@@ -1,16 +1,27 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
-    <f:entry title="${%Name}" field="name">
+    <f:entry title="${%Display Name}" field="name">
       <f:textbox />
     </f:entry>
     
     <f:entry title="${%Instance Cap}" field="instanceCapStr">
-        <f:textbox default="10"/>
+        <f:number default="10"/>
     </f:entry>
     
-    <f:property field="server"/>
+         <f:entry title="${%Docker URI}" field="uri">
+           <f:textbox default="unix:///var/run/docker.sock"/>
+         </f:entry>
+        
+        <f:optionalBlock name="useTLS" title="${%Use TLS}" checked="${instance.useTLS}" inline="true">
+        <f:entry title="${%Certificates Path}" field="certificatesPath">
+           <f:textbox default="/var/lib/jenkins/.docker/"/>
+         </f:entry>
+        </f:optionalBlock>
+     
+        
+        
     
-    <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="instanceCapStr" />
+    <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="useTLS,uri,certificatesPath" />
     
 </j:jelly>
