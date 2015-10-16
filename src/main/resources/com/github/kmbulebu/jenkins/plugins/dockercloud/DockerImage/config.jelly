@@ -22,5 +22,11 @@
     <f:entry title="${%Remote File system root}" field="remoteFS">
         <f:textbox default="/jenkins" />
     </f:entry>
+    
+    <f:advanced>
+        <f:entry title="${%Disable Pull}" field="disablePull">
+            <f:checkbox />
+        </f:entry>
+    </f:advanced>
         
 </j:jelly>

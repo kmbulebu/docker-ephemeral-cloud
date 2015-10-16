@@ -59,13 +59,16 @@ public class CreateContainerCallable implements Callable<Node> {
 			imageExists = false;
 		}
 		
-		LOGGER.fine("Image " + dockerImage + " exists? " + imageExists);
+		LOGGER.fine("Image " + dockerImage + " exists? " + imageExists + ", Pull disabled? " + dockerImage.isDisablePull());
 		
 		if (!imageExists) {
+			if (dockerImage.isDisablePull()) {
+				throw new IllegalStateException("Image '" + dockerImage.getDockerImageName() + "' does not exist on Docker cloud '" + dockerCloud.getDisplayName() + "' and pull is disabled.");
+			} 
 			LOGGER.info("Pulling image " + dockerImage.getDockerImageName() + ".");
 			docker.pull(dockerImage.getDockerImageName());
 			LOGGER.fine("Finished pulling image " + dockerImage.getDockerImageName() + ".");
-		}
+		} 
 		
 		// This ensures a Computer is created so that the slave url is available.
 		Jenkins.getInstance().addNode(slave);

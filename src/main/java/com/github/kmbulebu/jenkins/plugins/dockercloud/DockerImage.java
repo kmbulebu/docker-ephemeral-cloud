@@ -24,6 +24,9 @@ public class DockerImage implements Describable<DockerImage> {
 	private String dockerImageName;
 	private String remoteFS;
 	
+	// Advanced
+	private boolean pullDisabled;
+	
 	// force pull
 	// disable pull
 	// Registery auth
@@ -34,12 +37,14 @@ public class DockerImage implements Describable<DockerImage> {
 	// memory and swap
 	
 	@DataBoundConstructor
-	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, String remoteFS) {
+	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, String remoteFS, boolean disablePull) {
 		this.name = name;
 		this.labelString = labelString;
 		this.mode = mode;
 		this.dockerImageName = dockerImageName;
 		this.remoteFS = remoteFS;
+		
+		this.pullDisabled = disablePull;
 		
 		if (instanceCapStr == null || "".equals(instanceCapStr)) {
 			instanceCap = Integer.MAX_VALUE;
@@ -100,6 +105,15 @@ public class DockerImage implements Describable<DockerImage> {
 	@DataBoundSetter
 	public void setRemoteFS(String remoteFS) {
 		this.remoteFS = remoteFS;
+	}
+	
+	public boolean isPullDisabled() {
+		return pullDisabled;
+	}
+	
+	@DataBoundSetter
+	public void setPullDisabled(boolean pullDisabled) {
+		this.pullDisabled = pullDisabled;
 	}
 
 	@Override
