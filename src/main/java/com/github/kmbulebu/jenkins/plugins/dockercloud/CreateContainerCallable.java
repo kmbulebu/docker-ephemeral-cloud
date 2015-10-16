@@ -87,6 +87,9 @@ public class CreateContainerCallable implements Callable<Node> {
 			containerConfigBuilder.user(dockerImage.getUserOverride());
 		}
 		
+		// Set CPU shares. Hopefully this won't be a problem on any exotic Docker platforms.
+		containerConfigBuilder.cpuShares(dockerImage.getCpuShares());
+		
 		LOGGER.info("Creating container " + name + " from image " + dockerImage.getDockerImageName() + ".");
 		ContainerCreation creation = docker.createContainer(containerConfigBuilder.build(), name);
 		slave.setDockerId(creation.id());

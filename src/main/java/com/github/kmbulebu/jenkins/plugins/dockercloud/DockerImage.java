@@ -29,16 +29,16 @@ public class DockerImage implements Describable<DockerImage> {
 	private boolean pullForced;
 	private boolean pullDisabled;
 	private String userOverride;
+	private long cpuShares;
 	
 	// Registery auth
-	// user
 	// ports
 	// volumes
 	// cpu shares
 	// memory and swap
 	
 	@DataBoundConstructor
-	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, String remoteFS, boolean pullForced, boolean pullDisabled, String userOverride) {
+	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, String remoteFS, boolean pullForced, boolean pullDisabled, String userOverride, long cpuShares) {
 		this.name = name;
 		this.labelString = labelString;
 		this.mode = mode;
@@ -48,6 +48,13 @@ public class DockerImage implements Describable<DockerImage> {
 		this.pullForced = pullForced;
 		this.pullDisabled = pullDisabled;
 		this.userOverride = userOverride;
+		
+		// For migrating existing configs without CPU shares.
+		if (this.cpuShares == 0) {
+			this.cpuShares = 1024;
+		} else {
+			this.cpuShares = cpuShares;
+		}
 		
 		if (instanceCapStr == null || "".equals(instanceCapStr)) {
 			instanceCap = Integer.MAX_VALUE;
@@ -136,6 +143,15 @@ public class DockerImage implements Describable<DockerImage> {
 	public void setUserOverride(String userOverride) {
 		this.userOverride = userOverride;
 	}
+	
+	public long getCpuShares() {
+		return cpuShares;
+	}
+	
+	@DataBoundSetter
+	public void setCpuShares(long cpuShares) {
+		this.cpuShares = cpuShares;
+	}
 
 	@Override
 	public Descriptor<DockerImage> getDescriptor() {
@@ -189,6 +205,13 @@ public class DockerImage implements Describable<DockerImage> {
 		public FormValidation doCheckRemoteFS(@QueryParameter String remoteFS) {
 			if (remoteFS == null || remoteFS.length() < 1) {
 				return FormValidation.error("Required");
+			}
+			return FormValidation.ok();
+		}
+		
+		public FormValidation doCheckCpuShares(@QueryParameter long cpuShares) {
+			if (cpuShares < 1l) {
+				return FormValidation.error("Must be a positive value.");
 			}
 			return FormValidation.ok();
 		}

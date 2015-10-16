@@ -1,4 +1,4 @@
-<?jelly escape-by-default='true'?>
+    <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   
     <f:entry title="${%Display Name}" field="name">
@@ -33,6 +33,9 @@
          <f:entry title="${%User}" field="userOverride">
             <f:textbox />
          </f:entry>
+         <f:entry title="${%CPU Shares}" field="cpuShares">
+            <f:number default="1024"/>
+        </f:entry>
     </f:advanced>
         
 </j:jelly>
