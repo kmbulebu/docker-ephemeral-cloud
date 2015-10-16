@@ -23,6 +23,11 @@ import hudson.slaves.NodeProperty;
 import hudson.slaves.OfflineCause;
 import jenkins.model.Jenkins;
 
+/**
+ * Docker cloud provider.
+ * 
+ * @author Kevin Bulebush (kmbulebu@gmail.com)
+ */
 public class DockerSlave extends AbstractCloudSlave {
 
 	private final static ResourceBundleHolder RESOURCE_BUNDLE = ResourceBundleHolder.get(Messages.class);

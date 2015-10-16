@@ -1,7 +1,5 @@
 package com.github.kmbulebu.jenkins.plugins.dockercloud;
 
-import java.util.logging.Logger;
-
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -13,9 +11,12 @@ import hudson.model.Node;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
 
+/**
+ * Docker cloud provider.
+ * 
+ * @author Kevin Bulebush (kmbulebu@gmail.com)
+ */
 public class DockerImage implements Describable<DockerImage> {
-	
-	private static final Logger LOGGER = Logger.getLogger(DockerImage.class.getName());
 	
 	private String name;
 	private String labelString;
@@ -25,6 +26,7 @@ public class DockerImage implements Describable<DockerImage> {
 	private String remoteFS;
 	
 	// Advanced
+	private boolean pullForced;
 	private boolean pullDisabled;
 	
 	// force pull
@@ -36,14 +38,15 @@ public class DockerImage implements Describable<DockerImage> {
 	// memory and swap
 	
 	@DataBoundConstructor
-	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, String remoteFS, boolean disablePull) {
+	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, String remoteFS, boolean pullForced, boolean pullDisabled) {
 		this.name = name;
 		this.labelString = labelString;
 		this.mode = mode;
 		this.dockerImageName = dockerImageName;
 		this.remoteFS = remoteFS;
 		
-		this.pullDisabled = disablePull;
+		this.pullForced = pullForced;
+		this.pullDisabled = pullDisabled;
 		
 		if (instanceCapStr == null || "".equals(instanceCapStr)) {
 			instanceCap = Integer.MAX_VALUE;
@@ -104,6 +107,15 @@ public class DockerImage implements Describable<DockerImage> {
 	@DataBoundSetter
 	public void setRemoteFS(String remoteFS) {
 		this.remoteFS = remoteFS;
+	}
+	
+	public boolean isPullForced() {
+		return pullForced;
+	}
+	
+	@DataBoundSetter
+	public void setPullForced(boolean pullForced) {
+		this.pullForced = pullForced;
 	}
 	
 	public boolean isPullDisabled() {

@@ -5,7 +5,6 @@ import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
 import com.spotify.docker.client.DockerClient;
-import com.spotify.docker.client.DockerClient.ListContainersParam;
 import com.spotify.docker.client.ImageNotFoundException;
 import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
@@ -15,6 +14,11 @@ import hudson.model.Slave;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 
+/**
+ * Docker cloud provider.
+ * 
+ * @author Kevin Bulebush (kmbulebu@gmail.com)
+ */
 public class CreateContainerCallable implements Callable<Node> {
 	
 	private static final Logger LOGGER = Logger.getLogger(CreateContainerCallable.class.getName());
@@ -59,10 +63,10 @@ public class CreateContainerCallable implements Callable<Node> {
 			imageExists = false;
 		}
 		
-		LOGGER.fine("Image " + dockerImage + " exists? " + imageExists + ", Pull disabled? " + dockerImage.isDisablePull());
+		LOGGER.fine("Image " + dockerImage + " exists? " + imageExists + ", Pull disabled? " + dockerImage.isPullDisabled());
 		
-		if (!imageExists) {
-			if (dockerImage.isDisablePull()) {
+		if (!imageExists || dockerImage.isPullForced()) {
+			if (dockerImage.isPullDisabled()) {
 				throw new IllegalStateException("Image '" + dockerImage.getDockerImageName() + "' does not exist on Docker cloud '" + dockerCloud.getDisplayName() + "' and pull is disabled.");
 			} 
 			LOGGER.info("Pulling image " + dockerImage.getDockerImageName() + ".");
