@@ -179,7 +179,7 @@ public class DockerCloud extends AbstractCloudImpl {
 
 		@Override
 		public String getDisplayName() {
-			return "Docker Cloud";
+			return "Docker Ephemeral Cloud";
 		}
 
 		public FormValidation doCheckName(@QueryParameter String name) {
