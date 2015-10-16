@@ -79,9 +79,16 @@ public class CreateContainerCallable implements Callable<Node> {
 		
 		// Create and start container
 		final String[] command = new String[] {"sh", "-c", "curl -o slave.jar " + getSlaveJarUrl() + " && java -jar slave.jar -jnlpUrl " + getSlaveJnlpUrl(slave)};
-		ContainerConfig containerConfig = ContainerConfig.builder().image(dockerImage.getDockerImageName()).cmd(command).build();
+		ContainerConfig.Builder containerConfigBuilder = ContainerConfig.builder().image(dockerImage.getDockerImageName()).cmd(command);
+		
+		// Check for User override.
+		if (dockerImage.getUserOverride() != null && dockerImage.getUserOverride().trim().length() > 0) {
+			LOGGER.info("Setting user to '" + dockerImage.getUserOverride() + "' for container " + name + ".");
+			containerConfigBuilder.user(dockerImage.getUserOverride());
+		}
+		
 		LOGGER.info("Creating container " + name + " from image " + dockerImage.getDockerImageName() + ".");
-		ContainerCreation creation = docker.createContainer(containerConfig, name);
+		ContainerCreation creation = docker.createContainer(containerConfigBuilder.build(), name);
 		slave.setDockerId(creation.id());
 		LOGGER.info("Starting container " + name + " with id " + creation.id() + ".");
 		docker.startContainer(creation.id());

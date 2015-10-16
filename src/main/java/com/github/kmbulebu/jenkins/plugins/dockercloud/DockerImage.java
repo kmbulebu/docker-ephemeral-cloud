@@ -28,8 +28,8 @@ public class DockerImage implements Describable<DockerImage> {
 	// Advanced
 	private boolean pullForced;
 	private boolean pullDisabled;
+	private String userOverride;
 	
-	// force pull
 	// Registery auth
 	// user
 	// ports
@@ -38,7 +38,7 @@ public class DockerImage implements Describable<DockerImage> {
 	// memory and swap
 	
 	@DataBoundConstructor
-	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, String remoteFS, boolean pullForced, boolean pullDisabled) {
+	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, String remoteFS, boolean pullForced, boolean pullDisabled, String userOverride) {
 		this.name = name;
 		this.labelString = labelString;
 		this.mode = mode;
@@ -47,6 +47,7 @@ public class DockerImage implements Describable<DockerImage> {
 		
 		this.pullForced = pullForced;
 		this.pullDisabled = pullDisabled;
+		this.userOverride = userOverride;
 		
 		if (instanceCapStr == null || "".equals(instanceCapStr)) {
 			instanceCap = Integer.MAX_VALUE;
@@ -125,6 +126,15 @@ public class DockerImage implements Describable<DockerImage> {
 	@DataBoundSetter
 	public void setPullDisabled(boolean pullDisabled) {
 		this.pullDisabled = pullDisabled;
+	}
+	
+	public String getUserOverride() {
+		return userOverride;
+	}
+	
+	@DataBoundSetter
+	public void setUserOverride(String userOverride) {
+		this.userOverride = userOverride;
 	}
 
 	@Override
