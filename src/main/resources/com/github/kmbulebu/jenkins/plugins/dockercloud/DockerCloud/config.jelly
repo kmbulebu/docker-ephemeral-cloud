@@ -18,10 +18,11 @@
            <f:textbox default="/var/lib/jenkins/.docker/"/>
          </f:entry>
         </f:optionalBlock>
-     
-        
-        
-    
+       
     <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="useTLS,uri,certificatesPath" />
+    
+    <f:entry title="${%Images}">
+        <f:repeatableHeteroProperty field="images" hasHeader="false"/>
+    </f:entry> 
     
 </j:jelly>

@@ -5,13 +5,13 @@ import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
 import com.spotify.docker.client.DockerClient;
+import com.spotify.docker.client.DockerClient.ListContainersParam;
 import com.spotify.docker.client.ImageNotFoundException;
 import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
 
 import hudson.model.Node;
 import hudson.model.Slave;
-import hudson.model.Node.Mode;
 import jenkins.model.Jenkins;
 import jenkins.model.JenkinsLocationConfiguration;
 
@@ -24,38 +24,32 @@ public class CreateContainerCallable implements Callable<Node> {
 	private static final int CONTAINER_START_WAIT_MAX_COUNT = 60;
 	
 	private final String name;
-	private final String remoteFS;
-	private final Mode mode;
-	private final String labelString;
 	
 	private final DockerCloud dockerCloud;
-	private final String dockerImage;
+	private final DockerImage dockerImage;
 
-	public CreateContainerCallable(String remoteFS, Mode mode, String labelString, DockerCloud dockerCloud, String dockerImage) {
+	public CreateContainerCallable(DockerCloud dockerCloud, DockerImage dockerImage) {
 		super();
 		this.name = UUID.randomUUID().toString();
-		this.remoteFS = remoteFS;
-		this.mode = mode;
-		this.labelString = labelString;
 		this.dockerCloud = dockerCloud;
 		this.dockerImage = dockerImage;
 	}
 	
 	private String getNodeDescription() {
-		return "Docker container built from image '" + dockerImage + "' running in the '" + dockerCloud.getDisplayName() + "' docker cloud.";
+		return "Docker container built from image config '" + dockerImage.getName() + "' using docker image '" + dockerImage.getDockerImageName() + "' running in the '" + dockerCloud.getDisplayName() + "' docker cloud.";
 	}
 
 	@Override
 	public Node call() throws Exception {
 		LOGGER.fine("Creating docker slave node with name " + name);
-		final DockerSlave slave = new DockerSlave(dockerCloud, name, getNodeDescription(), remoteFS, mode, labelString);
+		final DockerSlave slave = new DockerSlave(dockerCloud, name, getNodeDescription(), dockerImage.getRemoteFS(), dockerImage.getMode(), dockerImage.getLabelString());
 		final DockerClient docker = dockerCloud.getDockerClient();
 		
 	    // Pull image.
 		boolean imageExists;
 		try {
-			LOGGER.fine("Checking if image " + dockerImage + " exists.");
-			if (docker.inspectImage(dockerImage) != null) {
+			LOGGER.fine("Checking if image " + dockerImage.getDockerImageName() + " exists.");
+			if (docker.inspectImage(dockerImage.getDockerImageName()) != null) {
 				imageExists = true;
 			} else {
 				// Should be unreachable.
@@ -68,9 +62,9 @@ public class CreateContainerCallable implements Callable<Node> {
 		LOGGER.fine("Image " + dockerImage + " exists? " + imageExists);
 		
 		if (!imageExists) {
-			LOGGER.info("Pulling image " + dockerImage + ".");
-			docker.pull(dockerImage);
-			LOGGER.fine("Finished pulling image " + dockerImage + ".");
+			LOGGER.info("Pulling image " + dockerImage.getDockerImageName() + ".");
+			docker.pull(dockerImage.getDockerImageName());
+			LOGGER.fine("Finished pulling image " + dockerImage.getDockerImageName() + ".");
 		}
 		
 		// This ensures a Computer is created so that the slave url is available.
@@ -78,8 +72,8 @@ public class CreateContainerCallable implements Callable<Node> {
 		
 		// Create and start container
 		final String[] command = new String[] {"sh", "-c", "curl -o slave.jar " + getSlaveJarUrl() + " && java -jar slave.jar -jnlpUrl " + getSlaveJnlpUrl(slave)};
-		ContainerConfig containerConfig = ContainerConfig.builder().image(dockerImage).cmd(command).build();
-		LOGGER.info("Creating container " + name + " from image " + dockerImage + ".");
+		ContainerConfig containerConfig = ContainerConfig.builder().image(dockerImage.getDockerImageName()).cmd(command).build();
+		LOGGER.info("Creating container " + name + " from image " + dockerImage.getDockerImageName() + ".");
 		ContainerCreation creation = docker.createContainer(containerConfig, name);
 		slave.setDockerId(creation.id());
 		LOGGER.info("Starting container " + name + " with id " + creation.id() + ".");

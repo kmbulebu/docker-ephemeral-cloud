@@ -1,0 +1,26 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  
+    <f:entry title="${%Display Name}" field="name">
+      <f:textbox />
+    </f:entry>
+    
+    <f:entry title="${%Instance Cap}" field="instanceCapStr">
+        <f:number default="10"/>
+    </f:entry>
+    
+    <f:entry title="${%Labels}" field="labelString">
+      <f:textbox />
+    </f:entry>
+    
+    <f:slave-mode name="mode" node="${instance}" />
+    
+    <f:entry title="${%Docker Image Name}" field="dockerImageName">
+        <f:textbox />
+    </f:entry>
+    
+    <f:entry title="${%Remote File system root}" field="remoteFS">
+        <f:textbox default="/jenkins" />
+    </f:entry>
+        
+</j:jelly>

@@ -70,7 +70,7 @@ public class DockerSlave extends AbstractCloudSlave {
 			try {
 				final DockerClient docker = dockerCloud.getDockerClient();
 				listener.getLogger().println("Stopping container " + dockerId);
-				docker.stopContainer(dockerId, 30);
+				docker.stopContainer(dockerId, 1);
 				listener.getLogger().println("Removing container " + dockerId + " and volumes.");
 				docker.removeContainer(dockerId, true);
 			} catch (DockerException e) {

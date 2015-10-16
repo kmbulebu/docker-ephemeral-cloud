@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -25,7 +24,7 @@ import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
-import hudson.model.Node.Mode;
+import hudson.model.Node;
 import hudson.slaves.AbstractCloudImpl;
 import hudson.slaves.Cloud;
 import hudson.slaves.NodeProvisioner;
@@ -47,90 +46,69 @@ public class DockerCloud extends AbstractCloudImpl {
 	private String uri;
 	private String certificatesPath;
 
-	// private List<DockerImage> images;
+	private List<DockerImage> images;
 
 	@DataBoundConstructor
-	public DockerCloud(String name, String instanceCapStr, Boolean useTLS, String uri, String certificatesPath) {
+	public DockerCloud(String name, String instanceCapStr, Boolean useTLS, String uri, String certificatesPath, List<? extends DockerImage> images) {
 		super(name, instanceCapStr);
 		this.useTLS = useTLS;
 		this.uri = uri;
 		this.certificatesPath = certificatesPath;
+
+		if (images == null) {
+			this.images = Collections.emptyList();
+		} else {
+			this.images = new ArrayList<DockerImage>(images);
+		}
 	}
-	
-	
-
-	/*
-	 * public DockerCloud(String name, String instanceCapStr, List<? extends
-	 * DockerImage> images) { super(name, instanceCapStr); this.server = new
-	 * DockerServerEndpoint(null, null);
-	 * 
-	 * if (images == null) { this.images = Collections.emptyList(); } else {
-	 * this.images = new ArrayList<DockerImage>(images); }
-	 * 
-	 * }
-	 */
-
-
-
-
 
 	public Boolean getUseTLS() {
 		return useTLS;
 	}
-
 
 	@DataBoundSetter
 	public void setUseTLS(Boolean useTLS) {
 		this.useTLS = useTLS;
 	}
 
-
-
 	public String getUri() {
 		return uri;
 	}
-
 
 	@DataBoundSetter
 	public void setUri(String uri) {
 		this.uri = uri;
 	}
 
-
-
 	public String getCertificatesPath() {
 		return certificatesPath;
 	}
-
 
 	@DataBoundSetter
 	public void setCertificatesPath(String certificatesPath) {
 		this.certificatesPath = certificatesPath;
 	}
 
-
-
 	@Override
 	public Collection<PlannedNode> provision(Label label, int excessWorkload) {
-		try {
-			// TODO ?? Count containers in progress but not yet read, subtract
-			// from excessWorkload.
+		// TODO ?? Count containers in progress but not yet read, subtract
+		// from excessWorkload.
 
-			// TODO Identify which configuration supports the specified label.
-
-			List<NodeProvisioner.PlannedNode> plannedNodes = new ArrayList<NodeProvisioner.PlannedNode>();
-
-			for (int i = 1; i <= excessWorkload; i++) {
-
-				LOGGER.warning("Call to create node");
-				CreateContainerCallable containerCallable = new CreateContainerCallable("/", Mode.NORMAL, label == null ? "" : label.toString(), this, "java:8");
-				plannedNodes.add(new NodeProvisioner.PlannedNode(name, Computer.threadPoolForRemoting.submit(containerCallable), 1));
-			}
-			return plannedNodes;
-		} catch (Exception e) {
-			LOGGER.log(Level.WARNING, "Failed to count the # of live instances on Docker", e);
+		// Identify which configuration supports the specified label.
+		final DockerImage foundImage = findDockerImageForLabel(label);
+		
+		if (foundImage == null) {
+			LOGGER.severe("Asked to create node but we couldn't find a matching docker image config.");
 			return Collections.emptyList();
 		}
+
+		List<NodeProvisioner.PlannedNode> plannedNodes = new ArrayList<NodeProvisioner.PlannedNode>();
+
+		for (int i = 1; i <= excessWorkload; i++) {
+			final CreateContainerCallable containerCallable = new CreateContainerCallable(this, foundImage);
+			plannedNodes.add(new NodeProvisioner.PlannedNode(name, Computer.threadPoolForRemoting.submit(containerCallable), 1));
+		}
+		return plannedNodes;
 	}
 
 	protected synchronized DockerClient getDockerClient() {
@@ -147,29 +125,50 @@ public class DockerCloud extends AbstractCloudImpl {
 
 	@Override
 	public boolean canProvision(Label label) {
-		// Check if we're above a container total limit.
+		// TODO Check if we're above a container total limit.
 
 		// Check if we have an image that matches the label.
+		final DockerImage foundImage = findDockerImageForLabel(label);
+		if (findDockerImageForLabel(label) == null) {
+			return false;
+		}
 
-		// Check if we're above that image's container limit.
+		// TODO Check if we're above that image's container limit.
 
-		// TODO Auto-generated method stub
 		return true;
 	}
 
+	public List<DockerImage> getImages() {
+		return images;
+	}
 
-	/*
-	 * public List<DockerImage> getImages() { return images; }
-	 * 
-	 * public synchronized void addImage(DockerImage image) { images.add(image);
-	 * }
-	 * 
-	 * public synchronized void removeImage(DockerImage image) {
-	 * images.remove(image); }
-	 * 
-	 * public Object readResolve() { for (DockerImage image : getImages()) {
-	 * image.readResolve(); } return this; }
-	 */
+	public synchronized void addImage(DockerImage image) {
+		images.add(image);
+	}
+
+	public synchronized void removeImage(DockerImage image) {
+		images.remove(image);
+	}
+
+	public Object readResolve() {
+		for (DockerImage image : getImages()) {
+			image.readResolve();
+		}
+		return this;
+	}
+	
+	private DockerImage findDockerImageForLabel(Label label) {
+		for (DockerImage image : getImages()) {
+			if (dockerImageMatchesLabel(image, label)) {
+				return image;
+			}
+		}
+		return null;
+	}
+	
+	private boolean dockerImageMatchesLabel(DockerImage image, Label label) {
+		return label == null ? image.getMode() == Node.Mode.NORMAL : label.matches(Label.parse(image.getLabelString()));
+	}
 
 	@Extension
 	public static class DescriptorImpl extends Descriptor<Cloud> {
@@ -181,19 +180,19 @@ public class DockerCloud extends AbstractCloudImpl {
 		@Override
 		public String getDisplayName() {
 			return "Docker Cloud";
-		}	
-		
+		}
+
 		public FormValidation doCheckName(@QueryParameter String name) {
 			if (name == null || name.length() < 1) {
 				return FormValidation.error("Required");
-			} 
+			}
 			return FormValidation.ok();
 		}
-		
+
 		public FormValidation doCheckInstanceCapStr(@QueryParameter String instanceCapStr) {
 			if (instanceCapStr == null || instanceCapStr.length() < 1) {
 				return FormValidation.error("Required");
-			} 
+			}
 			if (!instanceCapStr.matches("\\d+")) {
 				return FormValidation.error("Must be a number");
 			}
@@ -203,11 +202,11 @@ public class DockerCloud extends AbstractCloudImpl {
 			}
 			return FormValidation.ok();
 		}
-		
+
 		public FormValidation doCheckUri(@QueryParameter String uri) {
 			if (uri == null || uri.length() < 1) {
 				return FormValidation.error("Required");
-			} 
+			}
 			try {
 				new URI(uri);
 			} catch (URISyntaxException e) {
@@ -215,15 +214,15 @@ public class DockerCloud extends AbstractCloudImpl {
 			}
 			return FormValidation.ok();
 		}
-		
+
 		public FormValidation doCheckCertificatesPath(@QueryParameter String certificatesPath, @QueryParameter Boolean useTLS) {
 			if (useTLS == null || !useTLS) {
 				return FormValidation.ok();
 			}
 			if (certificatesPath == null || certificatesPath.length() < 1) {
 				return FormValidation.error("Required for TLS.");
-			} 
-			
+			}
+
 			try {
 				final Path certsPath = Paths.get(certificatesPath);
 				if (Files.notExists(certsPath)) {
@@ -237,7 +236,7 @@ public class DockerCloud extends AbstractCloudImpl {
 			}
 			return FormValidation.ok();
 		}
-		
+
 		public FormValidation doTestConnection(@QueryParameter Boolean useTLS, @QueryParameter String uri, @QueryParameter String certificatesPath) {
 			String result;
 			try {
@@ -250,12 +249,12 @@ public class DockerCloud extends AbstractCloudImpl {
 
 	}
 
-	 protected static DockerClient buildDockerClient(String uri, Boolean useTLS, String certificatesPath) throws Exception {
-		
-		final URI dockerUri = URI.create(uri); 
-		
+	protected static DockerClient buildDockerClient(String uri, Boolean useTLS, String certificatesPath) throws Exception {
+
+		final URI dockerUri = URI.create(uri);
+
 		DockerClient dockerClient;
-		
+
 		if (Boolean.TRUE.equals(useTLS)) {
 			final Path certsPath = Paths.get(certificatesPath);
 			final DockerCertificates dockerCerts = new DockerCertificates(certsPath);
@@ -263,10 +262,9 @@ public class DockerCloud extends AbstractCloudImpl {
 		} else {
 			dockerClient = new DefaultDockerClient(dockerUri);
 		}
-		
+
 		return dockerClient;
-	  
+
 	}
-	 
 
 }
