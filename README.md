@@ -1,4 +1,5 @@
 # Docker Ephemeral Cloud plugin
+[![Build Status](https://drone.io/github.com/kmbulebu/docker-ephemeral-cloud/status.png)](https://drone.io/github.com/kmbulebu/docker-ephemeral-cloud/latest)
 
 ## Introduction
 Ensuring Jenkins has a reliable, scalable, and flexible job slaves is a challenge. The Docker Ephemeral Cloud plugin provides
