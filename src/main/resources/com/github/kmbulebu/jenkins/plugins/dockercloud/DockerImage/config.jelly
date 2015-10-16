@@ -24,7 +24,7 @@
     </f:entry>
     
     <f:advanced>
-        <f:entry title="${%Disable Pull}" field="disablePull">
+        <f:entry title="${%Disable Pull}" field="pullDisabled">
             <f:checkbox />
         </f:entry>
     </f:advanced>

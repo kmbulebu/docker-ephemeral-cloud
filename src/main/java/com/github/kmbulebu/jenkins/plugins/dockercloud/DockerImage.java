@@ -28,7 +28,6 @@ public class DockerImage implements Describable<DockerImage> {
 	private boolean pullDisabled;
 	
 	// force pull
-	// disable pull
 	// Registery auth
 	// user
 	// ports
