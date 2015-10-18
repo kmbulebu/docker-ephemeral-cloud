@@ -40,24 +40,23 @@ complete, the container is stopped and removed.
 ### Configuring
 TODO
 
-## Other Docker cloud slave plugins
+### Known issues and limitations
+TODO
 
-### Why not [Docker Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Docker+Plugin)?
-The Docker Plugin is a great plugin both for creating a slave cloud, as well as for Docker build tasks. However, the Docker Plugin
-did not satisfy all needs in a Docker slave cloud.
-- Requires ssh server and port mapping. In some corporate environments, obtaining firewall exceptions for a large range of ports
- to establish SSH connections is difficult. A solution is needed to avoid port mappings.
-- It doesn't support TLS and client authentication.
+## Comparative to other Docker plugins
+
+#### [Docker Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Docker+Plugin)
+- Slaves containers require image with ssh server and accompanying port mappings.
+- No support for TLS and client authentication.
+- Provides additional capabilities beyond slaves, such as Docker build steps. 
  
-### What about the [CloudBees Docker Custom Build Environment Plugin](https://wiki.jenkins-ci.org/display/JENKINS/CloudBees+Docker+Custom+Build+Environment+Plugin)?
-The concept of this plugin is excellent, especially when combined with the Docker build and publish plugin. It gives the project admins and builders the flexibility to choose any Docker image as the
-build environment for their job. However, today there are some shortcomings.
-- It requires a real slave, running the Docker daemon. You will still need to maintain a slave with SCM tools, etc. Targetting a 
- container cloud, such as Docker Swarm, VMware Photon Platform, OpenShift is not possible with this plugin.
-- It requires the docker cli client on the slave. Docker is strict
- about requiring a client with a version that matches the server, further complicating slave and tool maintenance. 
-- Unless using Workflows, SCM checkouts are performed in the host slave before launching the container. Your SCM is not part of the custom build environment.
-- It maintains job and workspace state on Docker host between job runs.
-- Odd behaviors when used with other build environment plugins. 
+#### [CloudBees Docker Custom Build Environment Plugin](https://wiki.jenkins-ci.org/display/JENKINS/CloudBees+Docker+Custom+Build+Environment+Plugin)
+- Requires a regular slave, running the Docker daemon and client.
+- Allows for Docker image election within Job configuration.
+- No support for remote container clouds such as Docker Swarm, VMware Photon Platform, OpenShift, etc. 
+- SCM build steps performed on Docker host and directories bind mounted to containers.
+- Job and workspace state perssted on Docker host between job runs.
+- Incompatibilities exist with other build environment plugins. 
+- Jenkins Workflows Support 
   
  

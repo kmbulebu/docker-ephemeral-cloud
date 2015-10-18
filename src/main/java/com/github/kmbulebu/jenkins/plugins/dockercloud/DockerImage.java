@@ -34,7 +34,6 @@ public class DockerImage implements Describable<DockerImage> {
 	// Registery auth
 	// ports
 	// volumes
-	// cpu shares
 	// memory and swap
 	
 	@DataBoundConstructor
