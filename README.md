@@ -52,10 +52,10 @@ TODO
  
 #### [CloudBees Docker Custom Build Environment Plugin](https://wiki.jenkins-ci.org/display/JENKINS/CloudBees+Docker+Custom+Build+Environment+Plugin)
 - Requires a regular slave, running the Docker daemon and client.
-- Allows for Docker image election within Job configuration.
+- Allows for Docker image selection within Job configuration.
 - No support for remote container clouds such as Docker Swarm, VMware Photon Platform, OpenShift, etc. 
 - SCM build steps performed on Docker host and directories bind mounted to containers.
-- Job and workspace state perssted on Docker host between job runs.
+- Job and workspace state persisted on Docker host between job runs.
 - Incompatibilities exist with other build environment plugins. 
 - Jenkins Workflows Support 
   
