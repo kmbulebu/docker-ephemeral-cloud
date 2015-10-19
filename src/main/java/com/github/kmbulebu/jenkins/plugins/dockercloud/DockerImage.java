@@ -38,7 +38,6 @@ public class DockerImage implements Describable<DockerImage> {
 	// Registery auth
 	// ports
 	// volumes
-	// memory and swap
 	
 	@DataBoundConstructor
 	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, 

@@ -56,7 +56,10 @@ complete, the container is stopped and removed.
 ![Build executors] (build_executors.png)
 
 ### Known issues and limitations
-TODO
+
+- None documented at this time.
+
+Docker Ephemeral Cloud plugin is built using Spotify's [docker-client](https://github.com/spotify/docker-client) library. Please see their [issues page](https://github.com/spotify/docker-client/issues) for possible limitations and known issues.
 
 ## Comparative to other Docker plugins
 
