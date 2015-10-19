@@ -18,6 +18,13 @@ Docker is invoked via REST APIs to pull the image and run the container. Within 
 downloaded and run. Communication is established to the Jenkins master and the new slave node performs the requested job. When
 complete, the container is stopped and removed.
 
+### Features
+- Use Docker containers as Jenkins slaves.
+- No open ports required. Containers 'phone home' via Jenkins JNLP slave connections. 
+- Supports multiple Docker images using slave label mappings.
+- Connect via UNIX socket or remotely over REST. TLS supported.
+- Completely stateless. One executor, one job run per container life.
+
 ## Using
 
 ### Prerequisites
@@ -38,7 +45,15 @@ complete, the container is stopped and removed.
 - Contains curl, on the path. Used for downloading the slave jar
 
 ### Configuring
-TODO
+
+1. Add a Docker Ephemeral Cloud configuration in your Jenkins global configuration. 
+![Cloud Configuration] (cloud_config.png)
+
+2. Add a Docker image to use as a base for slave containers. 
+![Image Configuration] (image_basic_config.png)
+
+3 Run a job. You will see slaves come move through various states as they create, run, and destroy.
+![Image Configuration] (image_basic_config.png)
 
 ### Known issues and limitations
 TODO
