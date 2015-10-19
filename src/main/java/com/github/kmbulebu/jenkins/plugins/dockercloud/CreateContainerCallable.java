@@ -90,6 +90,20 @@ public class CreateContainerCallable implements Callable<Node> {
 		// Set CPU shares. Hopefully this won't be a problem on any exotic Docker platforms.
 		containerConfigBuilder.cpuShares(dockerImage.getCpuShares());
 		
+		if (dockerImage.isMemoryLimited()) {
+			final Long memory = dockerImage.getMemoryLimitMB() * 1024 * 1024; // MB to bytes.
+			LOGGER.info("Setting memory limit to '" + memory + "' for container " + name + ".");
+			containerConfigBuilder.memory(memory);
+			
+			// Can only limit swap if you limit memory.
+			if (dockerImage.isSwapLimited()) {
+				final Long swap = dockerImage.getSwapLimitMB() * 1024 * 1024; // MB to bytes
+				final Long memorySwap = swap + memory;
+				LOGGER.info("Setting memorySwap limit to '" + memorySwap + "' for container " + name + ".");
+				containerConfigBuilder.memorySwap(memorySwap);
+			}
+		}
+		
 		LOGGER.info("Creating container " + name + " from image " + dockerImage.getDockerImageName() + ".");
 		ContainerCreation creation = docker.createContainer(containerConfigBuilder.build(), name);
 		slave.setDockerId(creation.id());

@@ -36,6 +36,16 @@
          <f:entry title="${%CPU Shares}" field="cpuShares">
             <f:number default="1024"/>
         </f:entry>
+        <f:optionalBlock name="memoryLimited" title="${%Limit Memory}" checked="${instance.memoryLimited}" inline="true">
+            <f:entry title="${%Memory Limit MiB}" field="memoryLimitMB">
+                <f:number default="512"/>
+            </f:entry>
+            <f:optionalBlock name="swapLimited" title="${%Limit Swap Memory}" checked="${instance.swapLimited}" inline="true">
+            <f:entry title="${%Swap Limit MiB}" field="swapLimitMB">
+                <f:number default="1024"/>
+            </f:entry>
+            </f:optionalBlock>
+        </f:optionalBlock>
     </f:advanced>
         
 </j:jelly>

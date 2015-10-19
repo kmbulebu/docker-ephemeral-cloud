@@ -30,6 +30,10 @@ public class DockerImage implements Describable<DockerImage> {
 	private boolean pullDisabled;
 	private String userOverride;
 	private long cpuShares;
+	private boolean memoryLimited;
+	private long memoryLimitMB;
+	private boolean swapLimited;
+	private long swapLimitMB;
 	
 	// Registery auth
 	// ports
@@ -37,7 +41,9 @@ public class DockerImage implements Describable<DockerImage> {
 	// memory and swap
 	
 	@DataBoundConstructor
-	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, String remoteFS, boolean pullForced, boolean pullDisabled, String userOverride, long cpuShares) {
+	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, 
+			String remoteFS, boolean pullForced, boolean pullDisabled, String userOverride, long cpuShares,
+			boolean memoryLimited, long memoryLimitMB, boolean swapLimited, long swapLimitMB) {
 		this.name = name;
 		this.labelString = labelString;
 		this.mode = mode;
@@ -54,6 +60,11 @@ public class DockerImage implements Describable<DockerImage> {
 		} else {
 			this.cpuShares = cpuShares;
 		}
+		
+		this.memoryLimited = memoryLimited;
+		this.memoryLimitMB = memoryLimitMB;
+		this.swapLimited = swapLimited;
+		this.swapLimitMB = swapLimitMB;
 		
 		if (instanceCapStr == null || "".equals(instanceCapStr)) {
 			instanceCap = Integer.MAX_VALUE;
@@ -152,6 +163,42 @@ public class DockerImage implements Describable<DockerImage> {
 		this.cpuShares = cpuShares;
 	}
 
+	public boolean isMemoryLimited() {
+		return memoryLimited;
+	}
+
+	@DataBoundSetter
+	public void setMemoryLimited(boolean memoryLimited) {
+		this.memoryLimited = memoryLimited;
+	}
+
+	public long getMemoryLimitMB() {
+		return memoryLimitMB;
+	}
+
+	@DataBoundSetter
+	public void setMemoryLimitMB(long memoryLimitMB) {
+		this.memoryLimitMB = memoryLimitMB;
+	}
+
+	public boolean isSwapLimited() {
+		return swapLimited;
+	}
+
+	@DataBoundSetter
+	public void setSwapLimited(boolean swapLimited) {
+		this.swapLimited = swapLimited;
+	}
+
+	public long getSwapLimitMB() {
+		return swapLimitMB;
+	}
+
+	@DataBoundSetter
+	public void setSwapLimitMB(long swapLimitMB) {
+		this.swapLimitMB = swapLimitMB;
+	}
+
 	@Override
 	public Descriptor<DockerImage> getDescriptor() {
 		return (DescriptorImpl) Jenkins.getInstance().getDescriptor(getClass());	
@@ -214,6 +261,26 @@ public class DockerImage implements Describable<DockerImage> {
 			}
 			return FormValidation.ok();
 		}
+		
+		public FormValidation doCheckMemoryLimitMB(@QueryParameter boolean memoryLimited, @QueryParameter long memoryLimitMB) {
+			if (memoryLimited) {
+				if (memoryLimitMB < 1l) {
+					return FormValidation.error("Must be a positive value.");
+				}
+			}
+			return FormValidation.ok();
+		}
+		
+		public FormValidation doCheckSwapLimitMB(@QueryParameter boolean memoryLimited, @QueryParameter boolean swapLimited, @QueryParameter long swapLimitMB) {
+			if (memoryLimited && swapLimited) {
+				if (swapLimitMB < 1l) {
+					return FormValidation.error("Must be a positive value.");
+				}
+			}
+			return FormValidation.ok();
+		}
+		
+		
 		
 	}
 
