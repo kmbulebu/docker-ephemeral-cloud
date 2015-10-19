@@ -53,7 +53,7 @@ complete, the container is stopped and removed.
 ![Image Configuration] (image_basic_config.png)
 
 3 Run a job. You will see slaves come move through various states as they create, run, and destroy.
-![Image Configuration] (image_basic_config.png)
+![Build executors] (build_executors.png)
 
 ### Known issues and limitations
 TODO
