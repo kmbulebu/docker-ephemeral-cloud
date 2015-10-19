@@ -34,7 +34,14 @@ public class DockerImage implements Describable<DockerImage> {
 	private long memoryLimitMB;
 	private boolean swapLimited;
 	private long swapLimitMB;
+	private boolean privileged;
 	
+	// cpuset
+	// domain name
+	// hostname
+	// working directory
+	// privileged
+	// dns
 	// Registery auth
 	// ports
 	// volumes
@@ -42,7 +49,7 @@ public class DockerImage implements Describable<DockerImage> {
 	@DataBoundConstructor
 	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, 
 			String remoteFS, boolean pullForced, boolean pullDisabled, String userOverride, long cpuShares,
-			boolean memoryLimited, long memoryLimitMB, boolean swapLimited, long swapLimitMB) {
+			boolean memoryLimited, long memoryLimitMB, boolean swapLimited, long swapLimitMB, boolean privileged) {
 		this.name = name;
 		this.labelString = labelString;
 		this.mode = mode;
@@ -64,6 +71,8 @@ public class DockerImage implements Describable<DockerImage> {
 		this.memoryLimitMB = memoryLimitMB;
 		this.swapLimited = swapLimited;
 		this.swapLimitMB = swapLimitMB;
+		
+		this.privileged = privileged;
 		
 		if (instanceCapStr == null || "".equals(instanceCapStr)) {
 			instanceCap = Integer.MAX_VALUE;
@@ -196,6 +205,15 @@ public class DockerImage implements Describable<DockerImage> {
 	@DataBoundSetter
 	public void setSwapLimitMB(long swapLimitMB) {
 		this.swapLimitMB = swapLimitMB;
+	}
+	
+	public boolean isPrivileged() {
+		return privileged;
+	}
+
+	@DataBoundSetter
+	public void setPrivileged(boolean privileged) {
+		this.privileged = privileged;
 	}
 
 	@Override

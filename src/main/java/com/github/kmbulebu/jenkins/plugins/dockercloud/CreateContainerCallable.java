@@ -8,6 +8,7 @@ import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.ImageNotFoundException;
 import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
+import com.spotify.docker.client.messages.HostConfig;
 
 import hudson.model.Node;
 import hudson.model.Slave;
@@ -79,7 +80,8 @@ public class CreateContainerCallable implements Callable<Node> {
 		
 		// Create and start container
 		final String[] command = new String[] {"sh", "-c", "curl -o slave.jar " + getSlaveJarUrl() + " && java -jar slave.jar -jnlpUrl " + getSlaveJnlpUrl(slave)};
-		ContainerConfig.Builder containerConfigBuilder = ContainerConfig.builder().image(dockerImage.getDockerImageName()).cmd(command);
+		final ContainerConfig.Builder containerConfigBuilder = ContainerConfig.builder().image(dockerImage.getDockerImageName()).cmd(command);
+		final HostConfig.Builder hostConfigBuilder = HostConfig.builder();
 		
 		// Check for User override.
 		if (dockerImage.getUserOverride() != null && dockerImage.getUserOverride().trim().length() > 0) {
@@ -104,11 +106,14 @@ public class CreateContainerCallable implements Callable<Node> {
 			}
 		}
 		
+		// Set privileged if requested.
+		hostConfigBuilder.privileged(dockerImage.isPrivileged());
+		
 		LOGGER.info("Creating container " + name + " from image " + dockerImage.getDockerImageName() + ".");
 		ContainerCreation creation = docker.createContainer(containerConfigBuilder.build(), name);
 		slave.setDockerId(creation.id());
 		LOGGER.info("Starting container " + name + " with id " + creation.id() + ".");
-		docker.startContainer(creation.id());
+		docker.startContainer(creation.id(), hostConfigBuilder.build());
 		
 		// Wait for Jenkins to get Computer via Launcher online
 		int elapsed = 0;
