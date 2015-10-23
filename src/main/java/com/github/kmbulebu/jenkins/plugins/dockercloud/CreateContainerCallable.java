@@ -106,6 +106,11 @@ public class CreateContainerCallable implements Callable<Node> {
 			}
 		}
 		
+		// Setup working directory
+		if (dockerImage.getWorkingDir() != null && dockerImage.getWorkingDir().length() > 0) {
+			containerConfigBuilder.workingDir(dockerImage.getWorkingDir());
+		}
+		
 		// Set privileged if requested.
 		hostConfigBuilder.privileged(dockerImage.isPrivileged());
 		

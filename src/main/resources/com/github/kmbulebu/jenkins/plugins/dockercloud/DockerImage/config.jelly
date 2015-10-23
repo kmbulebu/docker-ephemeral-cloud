@@ -36,6 +36,9 @@
          <f:entry title="${%User}" field="userOverride">
             <f:textbox />
          </f:entry>
+         <f:entry title="${%Working Directory}" field="workingDir">
+            <f:textbox />
+         </f:entry>
          <f:entry title="${%CPU Shares}" field="cpuShares">
             <f:number default="1024"/>
         </f:entry>
