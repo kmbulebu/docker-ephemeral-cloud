@@ -6,10 +6,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
-import org.jvnet.localizer.Localizable;
 import org.jvnet.localizer.ResourceBundleHolder;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
+import com.spotify.docker.client.ContainerNotFoundException;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.DockerException;
 
@@ -20,8 +21,6 @@ import hudson.model.Descriptor.FormException;
 import hudson.slaves.AbstractCloudSlave;
 import hudson.slaves.JNLPLauncher;
 import hudson.slaves.NodeProperty;
-import hudson.slaves.OfflineCause;
-import jenkins.model.Jenkins;
 
 /**
  * Docker cloud provider.
@@ -56,6 +55,7 @@ public class DockerSlave extends AbstractCloudSlave {
 		return dockerId;
 	}
 
+	@DataBoundSetter
 	public void setDockerId(String dockerId) {
 		this.dockerId = dockerId;
 	}
@@ -78,16 +78,14 @@ public class DockerSlave extends AbstractCloudSlave {
 				docker.stopContainer(dockerId, 1);
 				listener.getLogger().println("Removing container " + dockerId + " and volumes.");
 				docker.removeContainer(dockerId, true);
+			} catch (ContainerNotFoundException e) {
+				LOGGER.log(Level.INFO, "Container " + dockerId + " not found. Ignoring.");
 			} catch (DockerException e) {
 				LOGGER.log(Level.SEVERE, "Error while stopping and removing container " + dockerId, e);
 				throw new IOException(e.getMessage(), e);
 			}
 		}
-		if (toComputer() != null) {
-			toComputer().disconnect(OfflineCause.create(new Localizable(RESOURCE_BUNDLE, "terminated_complete")));
-		}
-		Jenkins.getInstance().removeNode(this);
-		listener.getLogger().println("Slave node removed.");
+		listener.getLogger().println("Slave node terminated.");
 	}
 
 	@Extension

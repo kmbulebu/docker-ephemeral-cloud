@@ -21,6 +21,12 @@
        
     <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="useTLS,uri,certificatesPath" />
     
+    <f:advanced>
+        <f:entry title="${%Container Name Prefix}" field="containerNamePrefix">
+           <f:textbox default="jenkins-slave-"/>
+        </f:entry>
+    </f:advanced>
+    
     <f:entry title="${%Images}">
         <f:repeatableHeteroProperty field="images" hasHeader="false"/>
     </f:entry> 

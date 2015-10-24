@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -19,6 +20,8 @@ import org.kohsuke.stapler.QueryParameter;
 import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerCertificates;
 import com.spotify.docker.client.DockerClient;
+import com.spotify.docker.client.DockerException;
+import com.spotify.docker.client.messages.Container;
 
 import hudson.Extension;
 import hudson.model.Computer;
@@ -45,15 +48,18 @@ public class DockerCloud extends AbstractCloudImpl {
 	private Boolean useTLS;
 	private String uri;
 	private String certificatesPath;
+	private String containerNamePrefix;
 
 	private List<DockerImage> images;
 
 	@DataBoundConstructor
-	public DockerCloud(String name, String instanceCapStr, Boolean useTLS, String uri, String certificatesPath, List<? extends DockerImage> images) {
+	public DockerCloud(String name, String instanceCapStr, Boolean useTLS, String uri, 
+			String certificatesPath, List<? extends DockerImage> images, String containerNamePrefix) {
 		super(name, instanceCapStr);
 		this.useTLS = useTLS;
 		this.uri = uri;
 		this.certificatesPath = certificatesPath;
+		this.containerNamePrefix = containerNamePrefix;
 
 		if (images == null) {
 			this.images = Collections.emptyList();
@@ -88,12 +94,18 @@ public class DockerCloud extends AbstractCloudImpl {
 	public void setCertificatesPath(String certificatesPath) {
 		this.certificatesPath = certificatesPath;
 	}
+	
+	public String getContainerNamePrefix() {
+		return containerNamePrefix;
+	}
+	
+	@DataBoundSetter
+	public void setContainerNamePrefix(String containerNamePrefix) {
+		this.containerNamePrefix = containerNamePrefix;
+	}
 
 	@Override
 	public Collection<PlannedNode> provision(Label label, int excessWorkload) {
-		// TODO ?? Count containers in progress but not yet read, subtract
-		// from excessWorkload.
-
 		// Identify which configuration supports the specified label.
 		final DockerImage foundImage = findDockerImageForLabel(label);
 		
@@ -125,17 +137,46 @@ public class DockerCloud extends AbstractCloudImpl {
 
 	@Override
 	public boolean canProvision(Label label) {
-		// TODO Check if we're above a container total limit.
-
+		// Check if we're above a container total limit.
+		try {
+			final int containerCount = countRunningContainers();
+			LOGGER.log(Level.FINE, "Found " + containerCount + " total running slave containers.");
+			if (containerCount >= getInstanceCap()) {
+				LOGGER.log(Level.INFO, "Instance cap met. Can not provision any more.");
+				return false;
+			}
+		} catch (DockerException e) {
+			LOGGER.log(Level.WARNING, "Could not count running containers.", e);
+			return false;
+		} catch (InterruptedException e) {
+			LOGGER.log(Level.WARNING, "Interrupted while counting running containers.", e);
+			return false;
+		}
+		
 		// Check if we have an image that matches the label.
 		final DockerImage foundImage = findDockerImageForLabel(label);
-		if (findDockerImageForLabel(label) == null) {
+		if (foundImage == null) {
+			LOGGER.log(Level.FINE, "No matching labels.");
 			return false;
 		}
 
 		// TODO Check if we're above that image's container limit.
 
 		return true;
+	}
+	
+	private int countRunningContainers() throws DockerException, InterruptedException {
+		// The could be a performance hog in huge Docker environments. Replacing with
+		// docker labels/metadata is the plan.
+		int count = 0;
+		final String match = '/' + containerNamePrefix;
+		for (Container container : getDockerClient().listContainers()) {
+			// The convention appears to be the last name is the single container name.
+			if (container.names().size() > 0 && container.names().get(container.names().size() - 1).startsWith(match)) {
+				count++;
+			}
+		}
+		return count;
 	}
 
 	public List<DockerImage> getImages() {
@@ -245,6 +286,13 @@ public class DockerCloud extends AbstractCloudImpl {
 				return FormValidation.error(e, e.getMessage());
 			}
 			return FormValidation.ok(result);
+		}
+		
+		public FormValidation doCheckContainerNamePrefix(@QueryParameter String containerNamePrefix) {
+			if (containerNamePrefix == null || containerNamePrefix.length() < 1) {
+				FormValidation.error("Required");
+			}
+			return FormValidation.ok();
 		}
 
 	}

@@ -46,7 +46,8 @@ public class CreateContainerCallable implements Callable<Node> {
 
 	@Override
 	public Node call() throws Exception {
-		LOGGER.fine("Creating docker slave node with name " + name);
+		final String containerName = dockerCloud.getContainerNamePrefix() + name;
+		LOGGER.fine("Creating docker slave node with name " + containerName);
 		final DockerSlave slave = new DockerSlave(dockerCloud, name, getNodeDescription(), dockerImage.getRemoteFS(), dockerImage.getMode(), dockerImage.getLabelString());
 		final DockerClient docker = dockerCloud.getDockerClient();
 		
@@ -79,13 +80,13 @@ public class CreateContainerCallable implements Callable<Node> {
 		Jenkins.getInstance().addNode(slave);
 		
 		// Create and start container
-		final String[] command = new String[] {"sh", "-c", "curl -o slave.jar " + getSlaveJarUrl() + " && java -jar slave.jar -jnlpUrl " + getSlaveJnlpUrl(slave)};
+		final String[] command = new String[] {"sh", "-c", "curl -o slave.jar " + getSlaveJarUrl() + " && java -jar slave.jar -noReconnect -jnlpUrl " + getSlaveJnlpUrl(slave)};
 		final ContainerConfig.Builder containerConfigBuilder = ContainerConfig.builder().image(dockerImage.getDockerImageName()).cmd(command);
 		final HostConfig.Builder hostConfigBuilder = HostConfig.builder();
 		
 		// Check for User override.
 		if (dockerImage.getUserOverride() != null && dockerImage.getUserOverride().trim().length() > 0) {
-			LOGGER.info("Setting user to '" + dockerImage.getUserOverride() + "' for container " + name + ".");
+			LOGGER.info("Setting user to '" + dockerImage.getUserOverride() + "' for container " + containerName + ".");
 			containerConfigBuilder.user(dockerImage.getUserOverride());
 		}
 		
@@ -94,14 +95,14 @@ public class CreateContainerCallable implements Callable<Node> {
 		
 		if (dockerImage.isMemoryLimited()) {
 			final Long memory = dockerImage.getMemoryLimitMB() * 1024 * 1024; // MB to bytes.
-			LOGGER.info("Setting memory limit to '" + memory + "' for container " + name + ".");
+			LOGGER.info("Setting memory limit to '" + memory + "' for container " + containerName + ".");
 			containerConfigBuilder.memory(memory);
 			
 			// Can only limit swap if you limit memory.
 			if (dockerImage.isSwapLimited()) {
 				final Long swap = dockerImage.getSwapLimitMB() * 1024 * 1024; // MB to bytes
 				final Long memorySwap = swap + memory;
-				LOGGER.info("Setting memorySwap limit to '" + memorySwap + "' for container " + name + ".");
+				LOGGER.info("Setting memorySwap limit to '" + memorySwap + "' for container " + containerName + ".");
 				containerConfigBuilder.memorySwap(memorySwap);
 			}
 		}
@@ -114,10 +115,10 @@ public class CreateContainerCallable implements Callable<Node> {
 		// Set privileged if requested.
 		hostConfigBuilder.privileged(dockerImage.isPrivileged());
 		
-		LOGGER.info("Creating container " + name + " from image " + dockerImage.getDockerImageName() + ".");
-		ContainerCreation creation = docker.createContainer(containerConfigBuilder.build(), name);
+		LOGGER.info("Creating container " + containerName + " from image " + dockerImage.getDockerImageName() + ".");
+		ContainerCreation creation = docker.createContainer(containerConfigBuilder.build(), containerName);
 		slave.setDockerId(creation.id());
-		LOGGER.info("Starting container " + name + " with id " + creation.id() + ".");
+		LOGGER.info("Starting container " + containerName + " with id " + creation.id() + ".");
 		docker.startContainer(creation.id(), hostConfigBuilder.build());
 		
 		// Wait for Jenkins to get Computer via Launcher online
@@ -125,21 +126,21 @@ public class CreateContainerCallable implements Callable<Node> {
         do {
             Thread.sleep(CONTAINER_START_WAIT_INTERVAL_MS);
             elapsed++;
-            LOGGER.info("Waiting for slave on container " + name + " with id " + creation.id() + "...");
+            LOGGER.info("Waiting for slave on container " + containerName + " with id " + creation.id() + "...");
         } while (slave.getComputer() != null && !slave.getComputer().isOnline() && elapsed < CONTAINER_START_WAIT_MAX_COUNT);
         
         if (slave.getComputer() == null) {
-        	LOGGER.info("slave.getComputer() is null for container " + name + " with id " + creation.id() + ".");
+        	LOGGER.info("slave.getComputer() is null for container " + containerName + " with id " + creation.id() + ".");
             throw new IllegalStateException("Node was deleted, computer is null");
         }	
         
         if (!slave.getComputer().isOnline()) {
-        	LOGGER.info("Slave is not online yet for container " + name + " with id " + creation.id() + ". Giving up.");
+        	LOGGER.info("Slave is not online yet for container " + containerName + " with id " + creation.id() + ". Giving up.");
             throw new IllegalStateException("Timed out waiting for slave container to come online.");
         }
         
         // Make sure JNLP is connected before returning our slave.
-        slave.toComputer().connect(false);
+        slave.toComputer().connect(false).get();
 
         return slave;
 	}
