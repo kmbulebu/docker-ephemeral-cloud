@@ -80,7 +80,9 @@ public class CreateContainerCallable implements Callable<Node> {
 		Jenkins.getInstance().addNode(slave);
 		
 		// Create and start container
-		final String[] command = new String[] {"sh", "-c", "curl -o slave.jar " + getSlaveJarUrl() + " && java -jar slave.jar -noReconnect -jnlpUrl " + getSlaveJnlpUrl(slave)};
+		final String additionalSlaveOptions = "-noReconnect";
+		final String slaveOptions = "-jnlpUrl " + getSlaveJnlpUrl(slave) + " -secret " + getSlaveSecret(slave) + " " + additionalSlaveOptions;
+		final String[] command = new String[] {"sh", "-c", "curl -o slave.jar " + getSlaveJarUrl() + " && java -jar slave.jar " + slaveOptions};
 		final ContainerConfig.Builder containerConfigBuilder = ContainerConfig.builder().image(dockerImage.getDockerImageName()).cmd(command);
 		final HostConfig.Builder hostConfigBuilder = HostConfig.builder();
 		
@@ -169,6 +171,11 @@ public class CreateContainerCallable implements Callable<Node> {
 	 */
 	private String getSlaveJnlpUrl(Slave slave) {
 		return getJenkinsBaseUrl() + slave.getComputer().getUrl() + "slave-agent.jnlp";
+		
+	}
+	
+	private String getSlaveSecret(Slave slave) {
+		return slave.getComputer().getJnlpMac();
 		
 	}
 
