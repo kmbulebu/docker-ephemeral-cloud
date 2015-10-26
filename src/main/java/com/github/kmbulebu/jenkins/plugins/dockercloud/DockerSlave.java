@@ -2,6 +2,7 @@ package com.github.kmbulebu.jenkins.plugins.dockercloud;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,8 +47,8 @@ public class DockerSlave extends AbstractCloudSlave {
 	private static final long serialVersionUID = 1L;
 
 	@DataBoundConstructor
-	public DockerSlave(DockerCloud dockerCloud, String name, String nodeDescription, String remoteFS, Mode mode, String labelString) throws FormException, IOException {
-		super(name, nodeDescription, remoteFS, 1, mode, labelString, new JNLPLauncher(), new OnceRetentionStrategy(0), Collections.<NodeProperty<Node>> emptyList());
+	public DockerSlave(DockerCloud dockerCloud, String name, String nodeDescription, String remoteFS, Mode mode, String labelString, List<? extends NodeProperty<?>> nodeProperties) throws FormException, IOException {
+		super(name, nodeDescription, remoteFS, 1, mode, labelString, new JNLPLauncher(), new OnceRetentionStrategy(0), nodeProperties);
 		this.dockerCloud = dockerCloud;
 	}
 

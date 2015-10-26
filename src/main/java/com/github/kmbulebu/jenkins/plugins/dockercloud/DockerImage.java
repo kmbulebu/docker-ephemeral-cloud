@@ -1,5 +1,8 @@
 package com.github.kmbulebu.jenkins.plugins.dockercloud;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -7,7 +10,11 @@ import org.kohsuke.stapler.QueryParameter;
 import hudson.Extension;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
+import hudson.model.Hudson;
 import hudson.model.Node;
+import hudson.slaves.NodeProperty;
+import hudson.slaves.NodePropertyDescriptor;
+import hudson.util.DescribableList;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
 
@@ -37,6 +44,9 @@ public class DockerImage implements Describable<DockerImage> {
 	private boolean privileged;
 	private String workingDir;
 	
+	private DescribableList<NodeProperty<?>,NodePropertyDescriptor> nodeProperties = new DescribableList<NodeProperty<?>,NodePropertyDescriptor>(Hudson.getInstance());
+
+	
 	// cpuset
 	// domain name
 	// hostname
@@ -49,7 +59,7 @@ public class DockerImage implements Describable<DockerImage> {
 	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, 
 			String remoteFS, boolean pullForced, boolean pullDisabled, String userOverride, long cpuShares,
 			boolean memoryLimited, long memoryLimitMB, boolean swapLimited, long swapLimitMB, boolean privileged,
-			String workingDir) {
+			String workingDir, List<? extends NodeProperty<?>> nodeProperties) throws IOException {
 		this.name = name;
 		this.labelString = labelString;
 		this.mode = mode;
@@ -81,6 +91,8 @@ public class DockerImage implements Describable<DockerImage> {
 		} else {
 			instanceCap = Integer.parseInt(instanceCapStr);
 		}
+		
+		this.nodeProperties.replaceBy(nodeProperties);
 	}
 	
 	public String getName() {
@@ -232,7 +244,13 @@ public class DockerImage implements Describable<DockerImage> {
 		return (DescriptorImpl) Jenkins.getInstance().getDescriptor(getClass());	
 	}
 	
+    public DescribableList<NodeProperty<?>, NodePropertyDescriptor> getNodeProperties() {
+    	return nodeProperties;
+    }
+	
 	public Object readResolve() {
+		if(nodeProperties==null)
+	            nodeProperties = new DescribableList<NodeProperty<?>,NodePropertyDescriptor>(Jenkins.getInstance());
 		return this;
 	}
 	

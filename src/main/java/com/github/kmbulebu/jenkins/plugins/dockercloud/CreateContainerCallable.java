@@ -48,7 +48,7 @@ public class CreateContainerCallable implements Callable<Node> {
 	public Node call() throws Exception {
 		final String containerName = dockerCloud.getContainerNamePrefix() + name;
 		LOGGER.fine("Creating docker slave node with name " + containerName);
-		final DockerSlave slave = new DockerSlave(dockerCloud, name, getNodeDescription(), dockerImage.getRemoteFS(), dockerImage.getMode(), dockerImage.getLabelString());
+		final DockerSlave slave = new DockerSlave(dockerCloud, name, getNodeDescription(), dockerImage.getRemoteFS(), dockerImage.getMode(), dockerImage.getLabelString(), dockerImage.getNodeProperties());
 		final DockerClient docker = dockerCloud.getDockerClient();
 		
 	    // Pull image.

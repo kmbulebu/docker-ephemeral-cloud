@@ -53,5 +53,8 @@
             </f:optionalBlock>
         </f:optionalBlock>
     </f:advanced>
+    
+    <f:descriptorList title="${%Node Properties}" descriptors="${h.getNodePropertyDescriptors(descriptor.clazz)}" field="nodeProperties" />
+    
         
 </j:jelly>
