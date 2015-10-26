@@ -70,12 +70,7 @@ public class DockerImage implements Describable<DockerImage> {
 		this.pullDisabled = pullDisabled;
 		this.userOverride = userOverride;
 		
-		// For migrating existing configs without CPU shares.
-		if (this.cpuShares == 0) {
-			this.cpuShares = 1024;
-		} else {
-			this.cpuShares = cpuShares;
-		}
+		this.cpuShares = cpuShares;
 		
 		this.memoryLimited = memoryLimited;
 		this.memoryLimitMB = memoryLimitMB;
