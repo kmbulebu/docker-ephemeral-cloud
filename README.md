@@ -77,4 +77,7 @@ Docker Ephemeral Cloud plugin is built using Spotify's [docker-client](https://g
 - May limit use of other build environment and wrapper plugins. 
 - Jenkins Workflows Support 
   
- 
+#### Thanks
+
+Special thanks to Spotify and other contributors to docker-client. The [docker-client](https://github.com/spotify/docker-client) library is clean and intuitive, making this project a pleasure to write. 
+
