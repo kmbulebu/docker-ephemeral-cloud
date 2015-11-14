@@ -74,7 +74,7 @@ Docker Ephemeral Cloud plugin is built using Spotify's [docker-client](https://g
 - No support for remote container clouds such as Docker Swarm, VMware Photon Platform, OpenShift, etc. 
 - SCM build steps performed on Docker host and directories bind mounted to containers.
 - Job and workspace state persisted on Docker host between job runs.
-- Incompatibilities exist with other build environment plugins. 
+- May limit use of other build environment and wrapper plugins. 
 - Jenkins Workflows Support 
   
  
