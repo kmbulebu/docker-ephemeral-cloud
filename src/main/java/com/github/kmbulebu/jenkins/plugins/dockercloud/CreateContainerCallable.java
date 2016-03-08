@@ -118,10 +118,11 @@ public class CreateContainerCallable implements Callable<Node> {
 		hostConfigBuilder.privileged(dockerImage.isPrivileged());
 		
 		LOGGER.info("Creating container " + containerName + " from image " + dockerImage.getDockerImageName() + ".");
+		containerConfigBuilder.hostConfig(hostConfigBuilder.build());
 		ContainerCreation creation = docker.createContainer(containerConfigBuilder.build(), containerName);
 		slave.setDockerId(creation.id());
 		LOGGER.info("Starting container " + containerName + " with id " + creation.id() + ".");
-		docker.startContainer(creation.id(), hostConfigBuilder.build());
+		docker.startContainer(creation.id());
 		
 		// Wait for Jenkins to get Computer via Launcher online
 		int elapsed = 0;
