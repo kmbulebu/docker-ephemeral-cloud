@@ -1,7 +1,6 @@
 package com.github.kmbulebu.jenkins.plugins.dockercloud;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -12,11 +11,11 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.spotify.docker.client.ContainerNotFoundException;
+import com.spotify.docker.client.DockerCertificateException;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.DockerException;
 
 import hudson.Extension;
-import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.model.Descriptor.FormException;
 import hudson.slaves.AbstractCloudSlave;
@@ -47,9 +46,14 @@ public class DockerSlave extends AbstractCloudSlave {
 	private static final long serialVersionUID = 1L;
 
 	@DataBoundConstructor
-	public DockerSlave(DockerCloud dockerCloud, String name, String nodeDescription, String remoteFS, Mode mode, String labelString, List<? extends NodeProperty<?>> nodeProperties) throws FormException, IOException {
-		super(name, nodeDescription, remoteFS, 1, mode, labelString, new JNLPLauncher(), new OnceRetentionStrategy(0), nodeProperties);
+	public DockerSlave(DockerLauncher launcher, DockerCloud dockerCloud, String name, String dockerId, String nodeDescription, String remoteFS, Mode mode, String labelString, List<? extends NodeProperty<?>> nodeProperties) throws FormException, IOException {
+		super(name, nodeDescription, remoteFS, 1, mode, labelString, launcher, new OnceRetentionStrategy(0), nodeProperties);
 		this.dockerCloud = dockerCloud;
+		this.dockerId = dockerId;
+	}
+	
+	public DockerCloud getDockerCloud() {
+		return dockerCloud;
 	}
 
 	public String getDockerId() {
@@ -66,15 +70,15 @@ public class DockerSlave extends AbstractCloudSlave {
 		return new DockerComputer(this);
 	}
 
-
 	@Override
 	protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
 		if (dockerId == null) {
 			listener.getLogger().println("No container id exists to remove.");
 		} else {
 			// Delete from docker.
+			DockerClient docker = null;
 			try {
-				final DockerClient docker = dockerCloud.getDockerClient();
+				docker = dockerCloud.buildDockerClient();
 				listener.getLogger().println("Stopping container " + dockerId);
 				docker.stopContainer(dockerId, 1);
 				listener.getLogger().println("Removing container " + dockerId + " and volumes.");
@@ -84,10 +88,19 @@ public class DockerSlave extends AbstractCloudSlave {
 			} catch (DockerException e) {
 				LOGGER.log(Level.SEVERE, "Error while stopping and removing container " + dockerId, e);
 				throw new IOException(e.getMessage(), e);
+			} catch (DockerCertificateException e) {
+				LOGGER.log(Level.SEVERE, "Certificate error while stopping and removing container " + dockerId, e);
+				throw new IOException(e.getMessage(), e);
+			} finally {
+				if (docker != null) {
+					docker.close();
+				}
 			}
 		}
 		listener.getLogger().println("Slave node terminated.");
 	}
+	
+	
 
 	@Extension
 	public static final class DescriptorImpl extends SlaveDescriptor {

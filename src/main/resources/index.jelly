@@ -1,3 +1,4 @@
+<?jelly escape-by-default='true'?>
 <div>
     Plugin to run short lived, dynamic slaves in a Docker environment with JNLP launchers.
 </div>

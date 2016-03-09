@@ -18,6 +18,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 import com.spotify.docker.client.DefaultDockerClient;
+import com.spotify.docker.client.DockerCertificateException;
 import com.spotify.docker.client.DockerCertificates;
 import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.DockerException;
@@ -43,7 +44,6 @@ public class DockerCloud extends AbstractCloudImpl {
 
 	private static final Logger LOGGER = Logger.getLogger(DockerCloud.class.getName());
 
-	private transient DockerClient dockerClient;
 
 	private Boolean useTLS;
 	private String uri;
@@ -66,6 +66,7 @@ public class DockerCloud extends AbstractCloudImpl {
 		} else {
 			this.images = new ArrayList<DockerImage>(images);
 		}
+		
 	}
 
 	public Boolean getUseTLS() {
@@ -117,22 +118,17 @@ public class DockerCloud extends AbstractCloudImpl {
 		List<NodeProvisioner.PlannedNode> plannedNodes = new ArrayList<NodeProvisioner.PlannedNode>();
 
 		for (int i = 1; i <= excessWorkload; i++) {
-			final CreateContainerCallable containerCallable = new CreateContainerCallable(this, foundImage);
+			DockerClient dockerClient;
+			try {
+				dockerClient = buildDockerClient();
+			} catch (DockerCertificateException e) {
+				LOGGER.log(Level.SEVERE, "Could not request a new docker container. There's a problem with the TLS certificates. " + e.getMessage(), e);
+				return Collections.emptyList();
+			}
+			final CreateContainerCallable containerCallable = new CreateContainerCallable(dockerClient, this, foundImage);
 			plannedNodes.add(new NodeProvisioner.PlannedNode(name, Computer.threadPoolForRemoting.submit(containerCallable), 1));
 		}
 		return plannedNodes;
-	}
-
-	protected synchronized DockerClient getDockerClient() {
-		try {
-			if (dockerClient == null) {
-				dockerClient = buildDockerClient(uri, useTLS, certificatesPath);
-			}
-			return dockerClient;
-		} catch (Exception e) {
-			// Wrap in unchecked exception.
-			throw new IllegalArgumentException(e);
-		}
 	}
 
 	@Override
@@ -146,10 +142,13 @@ public class DockerCloud extends AbstractCloudImpl {
 				return false;
 			}
 		} catch (DockerException e) {
-			LOGGER.log(Level.WARNING, "Could not count running containers.", e);
+			LOGGER.log(Level.WARNING, "Could not count running containers. " + e.getMessage(), e);
 			return false;
 		} catch (InterruptedException e) {
 			LOGGER.log(Level.WARNING, "Interrupted while counting running containers.", e);
+			return false;
+		} catch (DockerCertificateException e) {
+			LOGGER.log(Level.WARNING, "Could not count running containers. There's a problem with the TLS certificates. " + e.getMessage(), e);
 			return false;
 		}
 		
@@ -165,15 +164,24 @@ public class DockerCloud extends AbstractCloudImpl {
 		return true;
 	}
 	
-	private int countRunningContainers() throws DockerException, InterruptedException {
+	private int countRunningContainers() throws DockerException, InterruptedException, DockerCertificateException {
 		// The could be a performance hog in huge Docker environments. Replacing with
 		// docker labels/metadata is the plan.
+		DockerClient dockerClient = null;
+		
 		int count = 0;
-		final String match = '/' + containerNamePrefix;
-		for (Container container : getDockerClient().listContainers()) {
-			// The convention appears to be the last name is the single container name.
-			if (container.names().size() > 0 && container.names().get(container.names().size() - 1).startsWith(match)) {
-				count++;
+		try {
+			dockerClient = buildDockerClient();
+			final String match = '/' + containerNamePrefix;
+			for (Container container : dockerClient.listContainers()) {
+				// The convention appears to be the last name is the single container name.
+				if (container.names().size() > 0 && container.names().get(container.names().size() - 1).startsWith(match)) {
+					count++;
+				}
+			}
+		} finally {
+			if (dockerClient != null) {
+				dockerClient.close();
 			}
 		}
 		return count;
@@ -280,10 +288,25 @@ public class DockerCloud extends AbstractCloudImpl {
 
 		public FormValidation doTestConnection(@QueryParameter Boolean useTLS, @QueryParameter String uri, @QueryParameter String certificatesPath) {
 			String result;
+			DockerClient client = null;
 			try {
-				result = buildDockerClient(uri, useTLS, certificatesPath).ping();
+				final URI dockerUri = URI.create(uri);
+
+				if (Boolean.TRUE.equals(useTLS)) {
+					final Path certsPath = Paths.get(certificatesPath);
+					final DockerCertificates dockerCerts = new DockerCertificates(certsPath);
+					client = new DefaultDockerClient(dockerUri, dockerCerts);
+				} else {
+					client = new DefaultDockerClient(dockerUri);
+				}
+
+				result = client.ping();
 			} catch (Exception e) {
 				return FormValidation.error(e, e.getMessage());
+			} finally {
+				if (client != null) {
+					client.close();
+				}
 			}
 			return FormValidation.ok(result);
 		}
@@ -297,8 +320,8 @@ public class DockerCloud extends AbstractCloudImpl {
 
 	}
 
-	protected static DockerClient buildDockerClient(String uri, Boolean useTLS, String certificatesPath) throws Exception {
-
+	
+	public DockerClient buildDockerClient() throws DockerCertificateException {
 		final URI dockerUri = URI.create(uri);
 
 		DockerClient dockerClient;
@@ -312,7 +335,6 @@ public class DockerCloud extends AbstractCloudImpl {
 		}
 
 		return dockerClient;
-
 	}
 
 }

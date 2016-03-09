@@ -1,7 +1,6 @@
 package com.github.kmbulebu.jenkins.plugins.dockercloud;
 
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
 import com.spotify.docker.client.DockerClient;
@@ -20,7 +19,7 @@ import jenkins.model.JenkinsLocationConfiguration;
  * 
  * @author Kevin Bulebush (kmbulebu@gmail.com)
  */
-public class CreateContainerCallable implements Callable<Node> {
+public class CreateContainerCallable extends DockerClientCallable<Node> {
 	
 	private static final Logger LOGGER = Logger.getLogger(CreateContainerCallable.class.getName());
 	
@@ -28,14 +27,11 @@ public class CreateContainerCallable implements Callable<Node> {
 	private static final int CONTAINER_START_WAIT_INTERVAL_MS = 1000;
 	private static final int CONTAINER_START_WAIT_MAX_COUNT = 60;
 	
-	private final String name;
-	
 	private final DockerCloud dockerCloud;
 	private final DockerImage dockerImage;
 
-	public CreateContainerCallable(DockerCloud dockerCloud, DockerImage dockerImage) {
-		super();
-		this.name = UUID.randomUUID().toString();
+	public CreateContainerCallable(DockerClient dockerClient, DockerCloud dockerCloud, DockerImage dockerImage) {
+		super(dockerClient);
 		this.dockerCloud = dockerCloud;
 		this.dockerImage = dockerImage;
 	}
@@ -45,17 +41,13 @@ public class CreateContainerCallable implements Callable<Node> {
 	}
 
 	@Override
-	public Node call() throws Exception {
-		final String containerName = dockerCloud.getContainerNamePrefix() + name;
-		LOGGER.fine("Creating docker slave node with name " + containerName);
-		final DockerSlave slave = new DockerSlave(dockerCloud, name, getNodeDescription(), dockerImage.getRemoteFS(), dockerImage.getMode(), dockerImage.getLabelString(), dockerImage.getNodeProperties());
-		final DockerClient docker = dockerCloud.getDockerClient();
+	public Node callWithDocker(DockerClient dockerClient) throws Exception {
 		
 	    // Pull image.
 		boolean imageExists;
 		try {
 			LOGGER.fine("Checking if image " + dockerImage.getDockerImageName() + " exists.");
-			if (docker.inspectImage(dockerImage.getDockerImageName()) != null) {
+			if (dockerClient.inspectImage(dockerImage.getDockerImageName()) != null) {
 				imageExists = true;
 			} else {
 				// Should be unreachable.
@@ -72,13 +64,64 @@ public class CreateContainerCallable implements Callable<Node> {
 				throw new IllegalStateException("Image '" + dockerImage.getDockerImageName() + "' does not exist on Docker cloud '" + dockerCloud.getDisplayName() + "' and pull is disabled.");
 			} 
 			LOGGER.info("Pulling image " + dockerImage.getDockerImageName() + ".");
-			docker.pull(dockerImage.getDockerImageName());
+			dockerClient.pull(dockerImage.getDockerImageName());
 			LOGGER.fine("Finished pulling image " + dockerImage.getDockerImageName() + ".");
 		} 
+
+		final ContainerConfig.Builder containerConfigBuilder = ContainerConfig.builder().image(dockerImage.getDockerImageName());
+		final HostConfig.Builder hostConfigBuilder = HostConfig.builder();
 		
-		// This ensures a Computer is created so that the slave url is available.
-		Jenkins.getInstance().addNode(slave);
+		LOGGER.info("Setting cmd to 'cat' with a pseudo tty.");
+		containerConfigBuilder.tty(true).cmd(new String[] {"cat"});
 		
+		// Set CPU shares. Hopefully this won't be a problem on any exotic Docker platforms.
+		containerConfigBuilder.cpuShares(dockerImage.getCpuShares());
+		
+		if (dockerImage.isMemoryLimited()) {
+			final Long memory = dockerImage.getMemoryLimitMB() * 1024 * 1024; // MB to bytes.
+			LOGGER.info("Setting memory limit to '" + memory + "' for container.");
+			containerConfigBuilder.memory(memory);
+			
+			// Can only limit swap if you limit memory.
+			if (dockerImage.isSwapLimited()) {
+				final Long swap = dockerImage.getSwapLimitMB() * 1024 * 1024; // MB to bytes
+				final Long memorySwap = swap + memory;
+				LOGGER.info("Setting memorySwap limit to '" + memorySwap + "' for container.");
+				containerConfigBuilder.memorySwap(memorySwap);
+			}
+		}
+		
+		// Setup working directory
+		if (dockerImage.getWorkingDir() != null && dockerImage.getWorkingDir().length() > 0) {
+			containerConfigBuilder.workingDir(dockerImage.getWorkingDir());
+		}
+		
+		// Set privileged if requested.
+		hostConfigBuilder.privileged(dockerImage.isPrivileged());
+		containerConfigBuilder.hostConfig(hostConfigBuilder.build());
+		
+		
+		
+		LOGGER.info("Creating container from image " + dockerImage.getDockerImageName() + ".");
+		final ContainerCreation creation = dockerClient.createContainer(containerConfigBuilder.build());
+		LOGGER.info("Starting container with id " + creation.id() + ".");
+		dockerClient.startContainer(creation.id());
+
+		String execUser;
+		if (dockerImage.getUserOverride() != null && dockerImage.getUserOverride().trim().length() > 0) {
+			LOGGER.info("Setting user to '" + dockerImage.getUserOverride() + "' for container.");
+			execUser = dockerImage.getUserOverride();
+		} else {
+			execUser = null;
+		}
+		
+		final DockerLauncher launcher = new DockerLauncher(execUser);
+		final String name = creation.id().substring(0, 12);
+		final DockerSlave slave = new DockerSlave(launcher, dockerCloud, name, creation.id(), getNodeDescription(), dockerImage.getRemoteFS(), dockerImage.getMode(), dockerImage.getLabelString(), dockerImage.getNodeProperties());
+		
+		return slave;
+		
+	/*	
 		// Create and start container
 		final String additionalSlaveOptions = "-noReconnect";
 		final String slaveOptions = "-jnlpUrl " + getSlaveJnlpUrl(slave) + " -secret " + getSlaveSecret(slave) + " " + additionalSlaveOptions;
@@ -92,37 +135,11 @@ public class CreateContainerCallable implements Callable<Node> {
 			containerConfigBuilder.user(dockerImage.getUserOverride());
 		}
 		
-		// Set CPU shares. Hopefully this won't be a problem on any exotic Docker platforms.
-		containerConfigBuilder.cpuShares(dockerImage.getCpuShares());
 		
-		if (dockerImage.isMemoryLimited()) {
-			final Long memory = dockerImage.getMemoryLimitMB() * 1024 * 1024; // MB to bytes.
-			LOGGER.info("Setting memory limit to '" + memory + "' for container " + containerName + ".");
-			containerConfigBuilder.memory(memory);
-			
-			// Can only limit swap if you limit memory.
-			if (dockerImage.isSwapLimited()) {
-				final Long swap = dockerImage.getSwapLimitMB() * 1024 * 1024; // MB to bytes
-				final Long memorySwap = swap + memory;
-				LOGGER.info("Setting memorySwap limit to '" + memorySwap + "' for container " + containerName + ".");
-				containerConfigBuilder.memorySwap(memorySwap);
-			}
-		}
-		
-		// Setup working directory
-		if (dockerImage.getWorkingDir() != null && dockerImage.getWorkingDir().length() > 0) {
-			containerConfigBuilder.workingDir(dockerImage.getWorkingDir());
-		}
-		
-		// Set privileged if requested.
-		hostConfigBuilder.privileged(dockerImage.isPrivileged());
-		
-		LOGGER.info("Creating container " + containerName + " from image " + dockerImage.getDockerImageName() + ".");
-		containerConfigBuilder.hostConfig(hostConfigBuilder.build());
-		ContainerCreation creation = docker.createContainer(containerConfigBuilder.build(), containerName);
 		slave.setDockerId(creation.id());
 		LOGGER.info("Starting container " + containerName + " with id " + creation.id() + ".");
-		docker.startContainer(creation.id());
+		dockerClient.startContainer(creation.id());
+		dockerClient.
 		
 		// Wait for Jenkins to get Computer via Launcher online
 		int elapsed = 0;
@@ -143,41 +160,10 @@ public class CreateContainerCallable implements Callable<Node> {
         }
         
         // Make sure JNLP is connected before returning our slave.
-        slave.toComputer().connect(false).get();
+        slave.toComputer().connect(false).get(); */
+	}
+	
 
-        return slave;
-	}
-	
-	/*
-	 *  Get a Jenkins Base URL ending with /
-	 */
-	private String getJenkinsBaseUrl() {
-		String url = JenkinsLocationConfiguration.get().getUrl();
-		if (url.endsWith("/")) {
-			return url;
-		} else {
-			return url + '/';
-		}
-	}
-	
-	/*
-	 * Get the slave jar URL.
-	 */
-	private String getSlaveJarUrl() {
-		return getJenkinsBaseUrl() + "jnlpJars/slave.jar";
-	}
-	
-	/*
-	 * Get the JNLP URL for the slave.
-	 */
-	private String getSlaveJnlpUrl(Slave slave) {
-		return getJenkinsBaseUrl() + slave.getComputer().getUrl() + "slave-agent.jnlp";
-		
-	}
-	
-	private String getSlaveSecret(Slave slave) {
-		return slave.getComputer().getJnlpMac();
-		
-	}
 
 }
+
