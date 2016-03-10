@@ -57,25 +57,7 @@ complete, the container is stopped and removed.
 
 ### Known issues and limitations
 
-- None documented at this time.
-
 Docker Ephemeral Cloud plugin is built using Spotify's [docker-client](https://github.com/spotify/docker-client) library. Please see their [issues page](https://github.com/spotify/docker-client/issues) for possible limitations and known issues.
-
-## Comparative to other Docker plugins
-
-#### [Docker Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Docker+Plugin)
-- Slaves containers require image with ssh server and accompanying port mappings.
-- No support for TLS and client authentication.
-- Provides additional capabilities beyond slaves, such as Docker build steps. 
- 
-#### [CloudBees Docker Custom Build Environment Plugin](https://wiki.jenkins-ci.org/display/JENKINS/CloudBees+Docker+Custom+Build+Environment+Plugin)
-- Requires a regular slave, running the Docker daemon and client.
-- Allows for Docker image selection within Job configuration.
-- No support for remote container clouds such as Docker Swarm, VMware Photon Platform, OpenShift, etc. 
-- SCM build steps performed on Docker host and directories bind mounted to containers.
-- Job and workspace state persisted on Docker host between job runs.
-- May limit use of other build environment and wrapper plugins. 
-- Jenkins Workflows Support 
   
 #### Thanks
 
