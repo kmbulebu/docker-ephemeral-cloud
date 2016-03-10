@@ -12,43 +12,27 @@ import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.DockerClient.ExecCreateParam;
 import com.spotify.docker.client.DockerClient.ExecStartParameter;
 import com.spotify.docker.client.DockerException;
+import com.spotify.docker.client.LogStream;
 
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.TaskListener;
 import hudson.slaves.ComputerLauncher;
+import hudson.slaves.DelegatingComputerLauncher;
 import hudson.slaves.JNLPLauncher;
 import hudson.slaves.SlaveComputer;
 import jenkins.model.JenkinsLocationConfiguration;
 
-public class DockerLauncher extends ComputerLauncher {
+public class DockerLauncher extends DelegatingComputerLauncher {
 	
 	private static final Logger LOGGER = Logger.getLogger(DockerLauncher.class.getName());
-	
-	private final ComputerLauncher childLauncher;
 	
 	private String execUser;
 
 	@DataBoundConstructor
 	public DockerLauncher(String execUser) {
-		super();
-		this.childLauncher = new JNLPLauncher();
+		super(new JNLPLauncher());
 		this.execUser = execUser;
-	}
-
-	@Override
-	public void afterDisconnect(SlaveComputer computer, TaskListener listener) {
-		childLauncher.afterDisconnect(computer, listener);
-	}
-
-	@Override
-	public void beforeDisconnect(SlaveComputer computer, TaskListener listener) {
-		childLauncher.beforeDisconnect(computer, listener);
-	}
-
-	@Override
-	public boolean isLaunchSupported() {
-		return childLauncher.isLaunchSupported();
 	}
 	
 	public String getExecUser() {
@@ -61,11 +45,14 @@ public class DockerLauncher extends ComputerLauncher {
 	}
 
 	@Override
-	public void launch(SlaveComputer computer, TaskListener listener) throws IOException, InterruptedException {
+	public void launch(final SlaveComputer computer, final TaskListener listener) throws IOException, InterruptedException {
 		final DockerSlave slaveNode = (DockerSlave) computer.getNode();
 		
-		DockerClient dockerClient = null;
+		// Start the JNLP listener.
+		super.launch(computer, listener);
 		
+		DockerClient dockerClient = null;
+		LogStream execStartStream = null;
 		try {
 			dockerClient = slaveNode.getDockerCloud().buildDockerClient();
 			final String additionalSlaveOptions = "-noReconnect";
@@ -81,19 +68,23 @@ public class DockerLauncher extends ComputerLauncher {
 			}
 			LOGGER.info("Building command exec for container.");
 			final String execId = dockerClient.execCreate(slaveNode.getDockerId(), command, params);
+			listener.getLogger().println("Created Docker exec with id " + execId);
 			LOGGER.info("Starting command exec for container.");
-			dockerClient.execStart(execId, ExecStartParameter.DETACH);
+			execStartStream = dockerClient.execStart(execId, ExecStartParameter.DETACH);
+			
+			// TODO Get the exec output to log here.
 		} catch (DockerCertificateException e) {
 			LOGGER.log(Level.WARNING, "Could not launcher Docker exec on container. There's a problem with the TLS certificates. " + e.getMessage(), e);
 		} catch (DockerException e) {
 			LOGGER.log(Level.WARNING, "Could not launcher Docker exec on container. " + e.getMessage(), e);
 		} finally {
+			if (execStartStream != null) {
+				execStartStream.close();
+			}
 			if (dockerClient != null) {
 				dockerClient.close();
 			}
 		}
-			// TODO Auto-generated method stub
-		childLauncher.launch(computer, listener);
 	}
 
 	/*
@@ -131,7 +122,7 @@ public class DockerLauncher extends ComputerLauncher {
 	@Extension
     public static final Descriptor<ComputerLauncher> DESCRIPTOR = new Descriptor<ComputerLauncher>() {
         public String getDisplayName() {
-            return "Docker Ephemeral Cloud Launcher";
+            return "Docker Container Launcher";
         }
     };
     

@@ -13,9 +13,9 @@
 	<name>Docker Ephemeral Cloud plugin</name>
 	<description>Jenkins plugin to run short lived, dynamic slaves in a Docker environment with JNLP launchers.</description>
 	<packaging>hpi</packaging>
-	
+
 	<url>https://github.com/kmbulebu/docker-ephemeral-cloud/</url>
-    <inceptionYear>2015</inceptionYear>
+	<inceptionYear>2015</inceptionYear>
 
 	<developers>
 		<developer>
@@ -80,6 +80,13 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.jenkins-ci.tools</groupId>
 				<artifactId>maven-hpi-plugin</artifactId>

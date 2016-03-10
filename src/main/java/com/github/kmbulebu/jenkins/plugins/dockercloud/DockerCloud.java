@@ -21,8 +21,8 @@ import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerCertificateException;
 import com.spotify.docker.client.DockerCertificates;
 import com.spotify.docker.client.DockerClient;
+import com.spotify.docker.client.DockerClient.ListContainersParam;
 import com.spotify.docker.client.DockerException;
-import com.spotify.docker.client.messages.Container;
 
 import hudson.Extension;
 import hudson.model.Computer;
@@ -67,6 +67,10 @@ public class DockerCloud extends AbstractCloudImpl {
 			this.images = new ArrayList<DockerImage>(images);
 		}
 		
+	}
+	
+	public String getName() {
+		return super.name;
 	}
 
 	public Boolean getUseTLS() {
@@ -114,7 +118,46 @@ public class DockerCloud extends AbstractCloudImpl {
 			LOGGER.severe("Asked to create node but we couldn't find a matching docker image config.");
 			return Collections.emptyList();
 		}
+		
+		// Check if we're above a container total limit.
+		try {
+			final int containerCount = countAllRunningContainers();
+			LOGGER.log(Level.FINE, "Found " + containerCount + " total running slave containers.");
+			if (containerCount >= getInstanceCap()) {
+				LOGGER.log(Level.INFO, "Instance cap met. Can not provision any more.");
+				return Collections.emptyList();
+			}
+		} catch (DockerException e) {
+			LOGGER.log(Level.WARNING, "Could not count all running containers. " + e.getMessage(), e);
+			return Collections.emptyList();
+		} catch (InterruptedException e) {
+			LOGGER.log(Level.WARNING, "Interrupted while counting all running containers.", e);
+			return Collections.emptyList();
+		} catch (DockerCertificateException e) {
+			LOGGER.log(Level.WARNING, "Could not count all running containers. There's a problem with the TLS certificates. " + e.getMessage(), e);
+			return Collections.emptyList();
+		}
+		
+		// Check if we're above a particular image container limit.
+		try {
+			final int containerCount = countRunningContainers(foundImage.getName());
+			LOGGER.log(Level.FINE, "Found " + containerCount + " running slave containers for this image.");
+			if (containerCount >= foundImage.getInstanceCap()) {
+				LOGGER.log(Level.INFO, "Image instance cap met. Can not provision any more.");
+				return Collections.emptyList();
+			}
+		} catch (DockerException e) {
+			LOGGER.log(Level.WARNING, "Could not count image's running containers. " + e.getMessage(), e);
+			return Collections.emptyList();
+		} catch (InterruptedException e) {
+			LOGGER.log(Level.WARNING, "Interrupted while counting image's running containers.", e);
+			return Collections.emptyList();
+		} catch (DockerCertificateException e) {
+			LOGGER.log(Level.WARNING, "Could not count image's running containers. There's a problem with the TLS certificates. " + e.getMessage(), e);
+			return Collections.emptyList();
+		}
 
+		// Provision some nodes
 		List<NodeProvisioner.PlannedNode> plannedNodes = new ArrayList<NodeProvisioner.PlannedNode>();
 
 		for (int i = 1; i <= excessWorkload; i++) {
@@ -133,58 +176,38 @@ public class DockerCloud extends AbstractCloudImpl {
 
 	@Override
 	public boolean canProvision(Label label) {
-		// Check if we're above a container total limit.
-		try {
-			final int containerCount = countRunningContainers();
-			LOGGER.log(Level.FINE, "Found " + containerCount + " total running slave containers.");
-			if (containerCount >= getInstanceCap()) {
-				LOGGER.log(Level.INFO, "Instance cap met. Can not provision any more.");
-				return false;
-			}
-		} catch (DockerException e) {
-			LOGGER.log(Level.WARNING, "Could not count running containers. " + e.getMessage(), e);
-			return false;
-		} catch (InterruptedException e) {
-			LOGGER.log(Level.WARNING, "Interrupted while counting running containers.", e);
-			return false;
-		} catch (DockerCertificateException e) {
-			LOGGER.log(Level.WARNING, "Could not count running containers. There's a problem with the TLS certificates. " + e.getMessage(), e);
-			return false;
-		}
-		
 		// Check if we have an image that matches the label.
 		final DockerImage foundImage = findDockerImageForLabel(label);
 		if (foundImage == null) {
 			LOGGER.log(Level.FINE, "No matching labels.");
 			return false;
+		} else {	
+			return true;
 		}
-
-		// TODO Check if we're above that image's container limit.
-
-		return true;
 	}
 	
-	private int countRunningContainers() throws DockerException, InterruptedException, DockerCertificateException {
+	private int countAllRunningContainers() throws DockerException, InterruptedException, DockerCertificateException {
+		return countRunningContainers(null);
+	}
+	
+	private int countRunningContainers(String imageName) throws DockerException, InterruptedException, DockerCertificateException {
 		// The could be a performance hog in huge Docker environments. Replacing with
 		// docker labels/metadata is the plan.
 		DockerClient dockerClient = null;
 		
-		int count = 0;
 		try {
 			dockerClient = buildDockerClient();
-			final String match = '/' + containerNamePrefix;
-			for (Container container : dockerClient.listContainers()) {
-				// The convention appears to be the last name is the single container name.
-				if (container.names().size() > 0 && container.names().get(container.names().size() - 1).startsWith(match)) {
-					count++;
-				}
+			List<ListContainersParam> params = new ArrayList<ListContainersParam>(2);
+			params.add(ListContainersParam.withLabel(DockerLabelsBuilder.CLOUD_NAME, DockerLabelsBuilder.sanitize(getName())));
+			if (imageName != null) {
+				params.add(ListContainersParam.withLabel(DockerLabelsBuilder.IMAGE_NAME, DockerLabelsBuilder.sanitize(imageName)));
 			}
+			return dockerClient.listContainers(params.toArray(new ListContainersParam[params.size()])).size();
 		} finally {
 			if (dockerClient != null) {
 				dockerClient.close();
 			}
 		}
-		return count;
 	}
 
 	public List<DockerImage> getImages() {

@@ -6,7 +6,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
-import org.jvnet.localizer.ResourceBundleHolder;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -19,7 +18,6 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 import hudson.model.Descriptor.FormException;
 import hudson.slaves.AbstractCloudSlave;
-import hudson.slaves.JNLPLauncher;
 import hudson.slaves.NodeProperty;
 
 /**
@@ -28,8 +26,6 @@ import hudson.slaves.NodeProperty;
  * @author Kevin Bulebush (kmbulebu@gmail.com)
  */
 public class DockerSlave extends AbstractCloudSlave {
-
-	private final static ResourceBundleHolder RESOURCE_BUNDLE = ResourceBundleHolder.get(Messages.class);
 
 	private static final Logger LOGGER = Logger.getLogger(DockerSlave.class.getName());
 
