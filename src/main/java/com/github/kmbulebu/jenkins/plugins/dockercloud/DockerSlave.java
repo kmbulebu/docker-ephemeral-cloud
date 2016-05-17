@@ -9,10 +9,11 @@ import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.spotify.docker.client.ContainerNotFoundException;
-import com.spotify.docker.client.DockerCertificateException;
+import com.spotify.docker.client.exceptions.ContainerNotFoundException;
+import com.spotify.docker.client.exceptions.DockerCertificateException;
 import com.spotify.docker.client.DockerClient;
-import com.spotify.docker.client.DockerException;
+import com.spotify.docker.client.DockerClient.RemoveContainerParam;
+import com.spotify.docker.client.exceptions.DockerException;
 
 import hudson.Extension;
 import hudson.model.TaskListener;
@@ -78,7 +79,7 @@ public class DockerSlave extends AbstractCloudSlave {
 				listener.getLogger().println("Stopping container " + dockerId);
 				docker.stopContainer(dockerId, 1);
 				listener.getLogger().println("Removing container " + dockerId + " and volumes.");
-				docker.removeContainer(dockerId, true);
+				docker.removeContainer(dockerId, RemoveContainerParam.forceKill(true), RemoveContainerParam.removeVolumes(true));
 			} catch (ContainerNotFoundException e) {
 				LOGGER.log(Level.INFO, "Container " + dockerId + " not found. Ignoring.");
 			} catch (DockerException e) {

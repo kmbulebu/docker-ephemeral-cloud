@@ -3,7 +3,7 @@ package com.github.kmbulebu.jenkins.plugins.dockercloud;
 import java.util.logging.Logger;
 
 import com.spotify.docker.client.DockerClient;
-import com.spotify.docker.client.ImageNotFoundException;
+import com.spotify.docker.client.exceptions.ImageNotFoundException;
 import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
 import com.spotify.docker.client.messages.HostConfig;
@@ -67,19 +67,19 @@ public class CreateContainerCallable extends DockerClientCallable<Node> {
 		containerConfigBuilder.tty(true).cmd(new String[] {"cat"});
 		
 		// Set CPU shares. Hopefully this won't be a problem on any exotic Docker platforms.
-		containerConfigBuilder.cpuShares(dockerImage.getCpuShares());
+		hostConfigBuilder.cpuShares(dockerImage.getCpuShares());
 		
 		if (dockerImage.isMemoryLimited()) {
 			final Long memory = dockerImage.getMemoryLimitMB() * 1024 * 1024; // MB to bytes.
 			LOGGER.info("Setting memory limit to '" + memory + "' for container.");
-			containerConfigBuilder.memory(memory);
+			hostConfigBuilder.memory(memory);
 			
 			// Can only limit swap if you limit memory.
 			if (dockerImage.isSwapLimited()) {
 				final Long swap = dockerImage.getSwapLimitMB() * 1024 * 1024; // MB to bytes
 				final Long memorySwap = swap + memory;
 				LOGGER.info("Setting memorySwap limit to '" + memorySwap + "' for container.");
-				containerConfigBuilder.memorySwap(memorySwap);
+				hostConfigBuilder.memorySwap(memorySwap);
 			}
 		}
 		
