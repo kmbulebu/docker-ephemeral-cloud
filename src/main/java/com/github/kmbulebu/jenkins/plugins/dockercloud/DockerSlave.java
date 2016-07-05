@@ -76,12 +76,12 @@ public class DockerSlave extends AbstractCloudSlave {
 			DockerClient docker = null;
 			try {
 				docker = dockerCloud.buildDockerClient();
-				listener.getLogger().println("Stopping container " + dockerId);
+				LOGGER.info("Stopping container " + dockerId);
 				docker.stopContainer(dockerId, 1);
-				listener.getLogger().println("Removing container " + dockerId + " and volumes.");
+				LOGGER.info("Removing container " + dockerId + " and volumes.");
 				docker.removeContainer(dockerId, RemoveContainerParam.forceKill(true), RemoveContainerParam.removeVolumes(true));
 			} catch (ContainerNotFoundException e) {
-				LOGGER.log(Level.INFO, "Container " + dockerId + " not found. Ignoring.");
+				LOGGER.info("Container " + dockerId + " not found. Ignoring.");
 			} catch (DockerException e) {
 				LOGGER.log(Level.SEVERE, "Error while stopping and removing container " + dockerId, e);
 				throw new IOException(e.getMessage(), e);
@@ -93,8 +93,8 @@ public class DockerSlave extends AbstractCloudSlave {
 					docker.close();
 				}
 			}
+			listener.getLogger().println("Slave node terminated in container " + dockerId + ".");
 		}
-		listener.getLogger().println("Slave node terminated in container " + dockerId + ".");
 	}
 	
 	

@@ -13,7 +13,6 @@ import com.spotify.docker.client.DockerClient.ExecStartParameter;
 import com.spotify.docker.client.LogStream;
 import com.spotify.docker.client.exceptions.DockerCertificateException;
 import com.spotify.docker.client.exceptions.DockerException;
-import com.spotify.docker.client.messages.ExecState;
 
 import hudson.Extension;
 import hudson.model.Descriptor;
@@ -67,23 +66,40 @@ public class DockerLauncher extends DelegatingComputerLauncher {
 			final ExecCreateParam[] params;
 			
 			if (execUser == null) {
-				params = new ExecCreateParam[] {};
+				params = new ExecCreateParam[] {ExecCreateParam.attachStderr(false), ExecCreateParam.attachStdout(false)};
 			} else {
-				params = new ExecCreateParam[] {ExecCreateParam.user(execUser)};
+				params = new ExecCreateParam[] {ExecCreateParam.user(execUser), ExecCreateParam.attachStderr(false), ExecCreateParam.attachStdout(false)};
 			}
-			LOGGER.info("Creating exec for container " + slaveNode.getDockerId() + ".");
+			LOGGER.fine("Creating exec for container " + slaveNode.getDockerId() + ".");
 			final String execId = dockerClient.execCreate(slaveNode.getDockerId(), command, params);
 			listener.getLogger().println("Created Docker exec with id " + execId);
 			LOGGER.info("Starting exec for container " + slaveNode.getDockerId() + ".");
 			execStartStream = dockerClient.execStart(execId, ExecStartParameter.DETACH);
-			
+			LOGGER.fine("Completed exec start for container " + slaveNode.getDockerId() + ".");
+			LOGGER.fine("Beginning sleep while waiting for slave in container " + slaveNode.getDockerId() + ".");
 			// Give time for slaves to connect. If it's not online and we exit this method, Jenkins will kill it soon.
 			Thread.sleep(Long.getLong(WAIT_FOR_SLAVE_PROPERTY, WAIT_FOR_SLAVE_PROPERTY_DEFAULT));
+			LOGGER.fine("Finished sleeping while waiting for slave in container " + slaveNode.getDockerId() + ".");
+			
+			
+			// Try and read the output, if possible
+			/*try {
+				do {
+					listener.getLogger().print(execStartStream.readFully());
+					Thread.sleep(5000);
+				} while (true);
+			} catch (RuntimeException e) {
+				LOGGER.log(Level.FINE, "Error while streaming output from exec start." + e.getMessage(), e);
+			}*/
+
 		} catch (DockerCertificateException e) {
 			LOGGER.log(Level.WARNING, "Could not launcher Docker exec on container. There's a problem with the TLS certificates. " + e.getMessage(), e);
 		} catch (DockerException e) {
 			LOGGER.log(Level.WARNING, "Could not launcher Docker exec on container " + slaveNode.getDockerId() + ". " + e.getMessage(), e);
-		} finally {
+		} catch (InterruptedException e) {
+			LOGGER.fine("Received interrupt. Exiting launcher for container " + slaveNode.getDockerId() + ".");
+			throw e;
+		}finally {
 			if (execStartStream != null) {
 				execStartStream.close();
 			}

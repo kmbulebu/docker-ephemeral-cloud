@@ -159,7 +159,8 @@ public class DockerCloud extends AbstractCloudImpl {
 
 		// Provision some nodes
 		List<NodeProvisioner.PlannedNode> plannedNodes = new ArrayList<NodeProvisioner.PlannedNode>();
-
+		
+		LOGGER.log(Level.FINE, "Provisioning containers to meet an excess workload of " + excessWorkload + " jobs with label '" + label.toString() + "'.");
 		for (int i = 1; i <= excessWorkload; i++) {
 			DockerClient dockerClient;
 			try {

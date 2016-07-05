@@ -57,13 +57,13 @@ public class CreateContainerCallable extends DockerClientCallable<Node> {
 			} 
 			LOGGER.info("Pulling image " + dockerImage.getDockerImageName() + ".");
 			dockerClient.pull(dockerImage.getDockerImageName());
-			LOGGER.fine("Finished pulling image " + dockerImage.getDockerImageName() + ".");
+			LOGGER.info("Finished pulling image " + dockerImage.getDockerImageName() + ".");
 		} 
 
 		final ContainerConfig.Builder containerConfigBuilder = ContainerConfig.builder().image(dockerImage.getDockerImageName());
 		final HostConfig.Builder hostConfigBuilder = HostConfig.builder();
 		
-		LOGGER.info("Setting cmd to 'cat' with a pseudo tty.");
+		LOGGER.fine("Setting cmd to 'cat' with a pseudo tty.");
 		containerConfigBuilder.tty(true).cmd(new String[] {"cat"});
 		
 		// Set CPU shares. Hopefully this won't be a problem on any exotic Docker platforms.
@@ -71,14 +71,14 @@ public class CreateContainerCallable extends DockerClientCallable<Node> {
 		
 		if (dockerImage.isMemoryLimited()) {
 			final Long memory = dockerImage.getMemoryLimitMB() * 1024 * 1024; // MB to bytes.
-			LOGGER.info("Setting memory limit to '" + memory + "' for container.");
+			LOGGER.fine("Setting memory limit to '" + memory + "' for container.");
 			hostConfigBuilder.memory(memory);
 			
 			// Can only limit swap if you limit memory.
 			if (dockerImage.isSwapLimited()) {
 				final Long swap = dockerImage.getSwapLimitMB() * 1024 * 1024; // MB to bytes
 				final Long memorySwap = swap + memory;
-				LOGGER.info("Setting memorySwap limit to '" + memorySwap + "' for container.");
+				LOGGER.fine("Setting memorySwap limit to '" + memorySwap + "' for container.");
 				hostConfigBuilder.memorySwap(memorySwap);
 			}
 		}
