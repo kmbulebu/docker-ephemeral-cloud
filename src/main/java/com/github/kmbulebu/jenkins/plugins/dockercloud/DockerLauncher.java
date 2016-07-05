@@ -79,9 +79,6 @@ public class DockerLauncher extends DelegatingComputerLauncher {
 			
 			// Give time for slaves to connect. If it's not online and we exit this method, Jenkins will kill it soon.
 			Thread.sleep(Long.getLong(WAIT_FOR_SLAVE_PROPERTY, WAIT_FOR_SLAVE_PROPERTY_DEFAULT));
-
-			final ExecState execState = dockerClient.execInspect(execId);
-			LOGGER.info("Launcher completed for container " + slaveNode.getDockerId() + ". Running: " + execState.running() + ". Exit Code: " + execState.exitCode());
 		} catch (DockerCertificateException e) {
 			LOGGER.log(Level.WARNING, "Could not launcher Docker exec on container. There's a problem with the TLS certificates. " + e.getMessage(), e);
 		} catch (DockerException e) {
