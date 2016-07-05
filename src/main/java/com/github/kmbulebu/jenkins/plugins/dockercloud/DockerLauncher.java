@@ -13,6 +13,7 @@ import com.spotify.docker.client.DockerClient.ExecStartParameter;
 import com.spotify.docker.client.LogStream;
 import com.spotify.docker.client.exceptions.DockerCertificateException;
 import com.spotify.docker.client.exceptions.DockerException;
+import com.spotify.docker.client.messages.ExecState;
 
 import hudson.Extension;
 import hudson.model.Descriptor;
@@ -26,6 +27,10 @@ import jenkins.model.JenkinsLocationConfiguration;
 public class DockerLauncher extends DelegatingComputerLauncher {
 	
 	private static final Logger LOGGER = Logger.getLogger(DockerLauncher.class.getName());
+	
+	private static final String WAIT_FOR_SLAVE_PROPERTY = DockerLauncher.class.getName() + ".waitforslavems";
+	
+	private static final long WAIT_FOR_SLAVE_PROPERTY_DEFAULT = 60000;
 	
 	private String execUser;
 
@@ -55,7 +60,7 @@ public class DockerLauncher extends DelegatingComputerLauncher {
 		LogStream execStartStream = null;
 		try {
 			dockerClient = slaveNode.getDockerCloud().buildDockerClient();
-			final String additionalSlaveOptions = "-noReconnect";
+			final String additionalSlaveOptions = "";
 			final String slaveOptions = "-jnlpUrl " + getSlaveJnlpUrl(computer) + " -secret " + getSlaveSecret(computer) + " " + additionalSlaveOptions;
 			final String[] command = new String[] {"sh", "-c", "curl -o slave.jar " + getSlaveJarUrl() + " && java -jar slave.jar " + slaveOptions};
 			
@@ -66,17 +71,21 @@ public class DockerLauncher extends DelegatingComputerLauncher {
 			} else {
 				params = new ExecCreateParam[] {ExecCreateParam.user(execUser)};
 			}
-			LOGGER.info("Building command exec for container.");
+			LOGGER.info("Creating exec for container " + slaveNode.getDockerId() + ".");
 			final String execId = dockerClient.execCreate(slaveNode.getDockerId(), command, params);
 			listener.getLogger().println("Created Docker exec with id " + execId);
-			LOGGER.info("Starting command exec for container.");
+			LOGGER.info("Starting exec for container " + slaveNode.getDockerId() + ".");
 			execStartStream = dockerClient.execStart(execId, ExecStartParameter.DETACH);
 			
-			// TODO Get the exec output to log here.
+			// Give time for slaves to connect. If it's not online and we exit this method, Jenkins will kill it soon.
+			Thread.sleep(Long.getLong(WAIT_FOR_SLAVE_PROPERTY, WAIT_FOR_SLAVE_PROPERTY_DEFAULT));
+
+			final ExecState execState = dockerClient.execInspect(execId);
+			LOGGER.info("Launcher completed for container " + slaveNode.getDockerId() + ". Running: " + execState.running() + ". Exit Code: " + execState.exitCode());
 		} catch (DockerCertificateException e) {
 			LOGGER.log(Level.WARNING, "Could not launcher Docker exec on container. There's a problem with the TLS certificates. " + e.getMessage(), e);
 		} catch (DockerException e) {
-			LOGGER.log(Level.WARNING, "Could not launcher Docker exec on container. " + e.getMessage(), e);
+			LOGGER.log(Level.WARNING, "Could not launcher Docker exec on container " + slaveNode.getDockerId() + ". " + e.getMessage(), e);
 		} finally {
 			if (execStartStream != null) {
 				execStartStream.close();

@@ -94,7 +94,7 @@ public class DockerSlave extends AbstractCloudSlave {
 				}
 			}
 		}
-		listener.getLogger().println("Slave node terminated.");
+		listener.getLogger().println("Slave node terminated in container " + dockerId + ".");
 	}
 	
 	
