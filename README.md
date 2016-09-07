@@ -55,9 +55,13 @@ complete, the container is stopped and removed.
 3. Run a job. You will see slaves come move through various states as they create, run, and destroy.
 ![Build executors] (build_executors.png)
 
-### Known issues and limitations
+### Known issues and workarounds
 
-Docker Ephemeral Cloud plugin is built using Spotify's [docker-client](https://github.com/spotify/docker-client) library. Please see their [issues page](https://github.com/spotify/docker-client/issues) for possible limitations and known issues.
+- Slaves no longer able to connect via JNLP or see deadlocked threads in node provisioning: You may be encountering [JENKINS-24155](https://issues.jenkins-ci.org/browse/JENKINS-24155). Set system property `-Djenkins.slaves.NioChannelSelector.disabled=true` as a workaround. 
+
+- Jenkins too slow to request new slaves: Try setting system property `-Dhudson.model.LoadStatistics.clock=10000` to smaller values to instruct Jenkins to calculate the need for slaves more often. `10000` is the default. 
+
+- Docker Ephemeral Cloud plugin is built using Spotify's [docker-client](https://github.com/spotify/docker-client) library. Please see their [issues page](https://github.com/spotify/docker-client/issues) for possible limitations and known issues.
   
 #### Thanks
 
