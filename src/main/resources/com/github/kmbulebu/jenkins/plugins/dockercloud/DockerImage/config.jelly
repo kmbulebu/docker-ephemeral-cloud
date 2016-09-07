@@ -54,6 +54,10 @@
         </f:optionalBlock>
     </f:advanced>
     
+    <f:entry title="${%Volumes}" field="volumes">
+        <f:textarea rows="2" style="width:100%"/>
+    </f:entry>
+    
     <f:descriptorList title="${%Node Properties}" descriptors="${h.getNodePropertyDescriptors(descriptor.clazz)}" field="nodeProperties" />
     
         

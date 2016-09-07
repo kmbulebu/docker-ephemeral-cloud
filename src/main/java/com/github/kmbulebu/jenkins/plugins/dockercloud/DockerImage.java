@@ -19,18 +19,18 @@ import jenkins.model.Jenkins;
 
 /**
  * Docker cloud provider.
- * 
+ *
  * @author Kevin Bulebush (kmbulebu@gmail.com)
  */
 public class DockerImage implements Describable<DockerImage> {
-	
+
 	private String name;
 	private String labelString;
 	private Node.Mode mode;
 	private int instanceCap;
 	private String dockerImageName;
 	private String remoteFS;
-	
+
 	// Advanced
 	private boolean pullForced;
 	private boolean pullDisabled;
@@ -42,10 +42,13 @@ public class DockerImage implements Describable<DockerImage> {
 	private long swapLimitMB;
 	private boolean privileged;
 	private String workingDir;
-	
+
+	// Prototype
+	private String volumes;
+
 	private DescribableList<NodeProperty<?>,NodePropertyDescriptor> nodeProperties = new DescribableList<NodeProperty<?>,NodePropertyDescriptor>(Jenkins.getInstance());
 
-	
+
 	// cpuset
 	// domain name
 	// hostname
@@ -53,42 +56,44 @@ public class DockerImage implements Describable<DockerImage> {
 	// Registery auth
 	// ports
 	// volumes
-	
+
 	@DataBoundConstructor
-	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName, 
+	public DockerImage(String name, String labelString, Node.Mode mode, String instanceCapStr, String dockerImageName,
 			String remoteFS, boolean pullForced, boolean pullDisabled, String userOverride, long cpuShares,
 			boolean memoryLimited, long memoryLimitMB, boolean swapLimited, long swapLimitMB, boolean privileged,
-			String workingDir, List<? extends NodeProperty<?>> nodeProperties) throws IOException {
+			String workingDir, String volumes, List<? extends NodeProperty<?>> nodeProperties) throws IOException {
 		this.name = name;
 		this.labelString = labelString;
 		this.mode = mode;
 		this.dockerImageName = dockerImageName;
 		this.remoteFS = remoteFS;
-		
+
 		this.pullForced = pullForced;
 		this.pullDisabled = pullDisabled;
 		this.userOverride = userOverride;
-		
+
 		this.cpuShares = cpuShares;
-		
+
 		this.memoryLimited = memoryLimited;
 		this.memoryLimitMB = memoryLimitMB;
 		this.swapLimited = swapLimited;
 		this.swapLimitMB = swapLimitMB;
-		
+
 		this.privileged = privileged;
-		
+
 		this.workingDir = workingDir;
-		
+
+		this.volumes = volumes;
+
 		if (instanceCapStr == null || "".equals(instanceCapStr)) {
 			instanceCap = Integer.MAX_VALUE;
 		} else {
 			instanceCap = Integer.parseInt(instanceCapStr);
 		}
-		
+
 		this.nodeProperties.replaceBy(nodeProperties);
 	}
-	
+
 	public String getName() {
 		return name;
 	}
@@ -101,16 +106,16 @@ public class DockerImage implements Describable<DockerImage> {
 	public String getLabelString() {
 		return labelString;
 	}
-	
+
 	@DataBoundSetter
 	public void setLabelString(String labelString) {
 		this.labelString = labelString;
 	}
-	
+
 	public Node.Mode getMode() {
 		return mode;
 	}
-	
+
 	@DataBoundSetter
 	public void setMode(Node.Mode mode) {
 		this.mode = mode;
@@ -133,47 +138,47 @@ public class DockerImage implements Describable<DockerImage> {
 	public void setDockerImageName(String dockerImageName) {
 		this.dockerImageName = dockerImageName;
 	}
-	
+
 	public String getRemoteFS() {
 		return remoteFS;
 	}
-	
+
 	@DataBoundSetter
 	public void setRemoteFS(String remoteFS) {
 		this.remoteFS = remoteFS;
 	}
-	
+
 	public boolean isPullForced() {
 		return pullForced;
 	}
-	
+
 	@DataBoundSetter
 	public void setPullForced(boolean pullForced) {
 		this.pullForced = pullForced;
 	}
-	
+
 	public boolean isPullDisabled() {
 		return pullDisabled;
 	}
-	
+
 	@DataBoundSetter
 	public void setPullDisabled(boolean pullDisabled) {
 		this.pullDisabled = pullDisabled;
 	}
-	
+
 	public String getUserOverride() {
 		return userOverride;
 	}
-	
+
 	@DataBoundSetter
 	public void setUserOverride(String userOverride) {
 		this.userOverride = userOverride;
 	}
-	
+
 	public long getCpuShares() {
 		return cpuShares;
 	}
-	
+
 	@DataBoundSetter
 	public void setCpuShares(long cpuShares) {
 		this.cpuShares = cpuShares;
@@ -214,7 +219,7 @@ public class DockerImage implements Describable<DockerImage> {
 	public void setSwapLimitMB(long swapLimitMB) {
 		this.swapLimitMB = swapLimitMB;
 	}
-	
+
 	public boolean isPrivileged() {
 		return privileged;
 	}
@@ -223,34 +228,43 @@ public class DockerImage implements Describable<DockerImage> {
 	public void setPrivileged(boolean privileged) {
 		this.privileged = privileged;
 	}
-	
+
 	public String getWorkingDir() {
 		return workingDir;
 	}
-	
+
 	@DataBoundSetter
 	public void setWorkingDir(String workingDir) {
 		this.workingDir = workingDir;
 	}
 
+	public String getVolumes() {
+		return volumes;
+	}
+
+	@DataBoundSetter
+	public void setVolumes(String volumes) {
+		this.volumes = volumes;
+	}
+
 	@Override
 	public Descriptor<DockerImage> getDescriptor() {
-		return (DescriptorImpl) Jenkins.getInstance().getDescriptor(getClass());	
+		return (DescriptorImpl) Jenkins.getInstance().getDescriptor(getClass());
 	}
-	
+
     public DescribableList<NodeProperty<?>, NodePropertyDescriptor> getNodeProperties() {
     	return nodeProperties;
     }
-	
+
 	public Object readResolve() {
 		if(nodeProperties==null)
 	            nodeProperties = new DescribableList<NodeProperty<?>,NodePropertyDescriptor>(Jenkins.getInstance());
 		return this;
 	}
-	
+
 	@Extension
     public static final class DescriptorImpl extends Descriptor<DockerImage> {
-		
+
 		public DescriptorImpl() {
 			super(DockerImage.class);
 		}
@@ -259,14 +273,14 @@ public class DockerImage implements Describable<DockerImage> {
 		public String getDisplayName() {
 			return "Docker Image";
 		}
-		
+
 		public FormValidation doCheckName(@QueryParameter String name) {
 			if (name == null || name.length() < 1) {
 				return FormValidation.error("Required");
 			}
 			return FormValidation.ok();
 		}
-		
+
 		public FormValidation doCheckInstanceCapStr(@QueryParameter String instanceCapStr) {
 			if (instanceCapStr == null || instanceCapStr.length() < 1) {
 				return FormValidation.error("Required");
@@ -280,28 +294,28 @@ public class DockerImage implements Describable<DockerImage> {
 			}
 			return FormValidation.ok();
 		}
-		
+
 		public FormValidation doCheckDockerImageName(@QueryParameter String dockerImageName) {
 			if (dockerImageName == null || dockerImageName.length() < 1) {
 				return FormValidation.error("Required");
 			}
 			return FormValidation.ok();
 		}
-		
+
 		public FormValidation doCheckRemoteFS(@QueryParameter String remoteFS) {
 			if (remoteFS == null || remoteFS.length() < 1) {
 				return FormValidation.error("Required");
 			}
 			return FormValidation.ok();
 		}
-		
+
 		public FormValidation doCheckCpuShares(@QueryParameter long cpuShares) {
 			if (cpuShares < 1l) {
 				return FormValidation.error("Must be a positive value.");
 			}
 			return FormValidation.ok();
 		}
-		
+
 		public FormValidation doCheckMemoryLimitMB(@QueryParameter boolean memoryLimited, @QueryParameter long memoryLimitMB) {
 			if (memoryLimited) {
 				if (memoryLimitMB < 1l) {
@@ -310,7 +324,7 @@ public class DockerImage implements Describable<DockerImage> {
 			}
 			return FormValidation.ok();
 		}
-		
+
 		public FormValidation doCheckSwapLimitMB(@QueryParameter boolean memoryLimited, @QueryParameter boolean swapLimited, @QueryParameter long swapLimitMB) {
 			if (memoryLimited && swapLimited) {
 				if (swapLimitMB < 1l) {
@@ -319,9 +333,9 @@ public class DockerImage implements Describable<DockerImage> {
 			}
 			return FormValidation.ok();
 		}
-		
-		
-		
+
+
+
 	}
 
 }

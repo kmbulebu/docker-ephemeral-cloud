@@ -55,7 +55,7 @@
 			<dependency>
 				<groupId>com.spotify</groupId>
 				<artifactId>docker-client</artifactId>
-				<version>4.0.6</version>
+				<version>5.0.2</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -100,7 +100,7 @@
 		</plugins>
 		<pluginManagement>
 			<plugins>
-				<!--This plugin's configuration is used to store Eclipse m2e settings 
+				<!--This plugin's configuration is used to store Eclipse m2e settings
 					only. It has no influence on the Maven build itself. -->
 				<plugin>
 					<groupId>org.eclipse.m2e</groupId>
@@ -178,7 +178,7 @@
 		</profile>
 	</profiles>
 
-	<!-- get every artifact through repo.jenkins-ci.org, which proxies all the 
+	<!-- get every artifact through repo.jenkins-ci.org, which proxies all the
 		artifacts that we need -->
 	<repositories>
 		<repository>

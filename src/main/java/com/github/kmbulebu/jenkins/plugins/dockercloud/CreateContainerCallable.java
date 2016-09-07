@@ -1,5 +1,8 @@
 package com.github.kmbulebu.jenkins.plugins.dockercloud;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 
 import com.spotify.docker.client.DockerClient;
@@ -98,8 +101,22 @@ public class CreateContainerCallable extends DockerClientCallable<Node> {
 		
 		// Set privileged if requested.
 		hostConfigBuilder.privileged(dockerImage.isPrivileged());
-		containerConfigBuilder.hostConfig(hostConfigBuilder.build());
 		
+		
+		// Volumes
+		String[] volumeLines;
+		if (dockerImage.getVolumes() == null) {
+			volumeLines = new String[] {};
+		} else {
+			volumeLines = dockerImage.getVolumes().split("$");
+		}
+		
+		LOGGER.fine("Adding host binds and container volumes: " + Arrays.toString(volumeLines));
+		hostConfigBuilder.binds(volumeLines);
+		containerConfigBuilder.volumes(volumeLines);
+		
+		// Add host config 
+		containerConfigBuilder.hostConfig(hostConfigBuilder.build());
 		
 		LOGGER.info("Creating container from image " + dockerImage.getDockerImageName() + ".");
 		final ContainerCreation creation = dockerClient.createContainer(containerConfigBuilder.build());
