@@ -31,6 +31,8 @@ public class DockerLauncher extends DelegatingComputerLauncher {
 	
 	private static final long WAIT_FOR_SLAVE_PROPERTY_DEFAULT = 60000;
 	
+	private static final String SLAVE_JAR_DISABLE_SSL_VERIFICATION = " -disableSslVerification";
+	
 	private String execUser;
 
 	@DataBoundConstructor
@@ -59,8 +61,8 @@ public class DockerLauncher extends DelegatingComputerLauncher {
 		LogStream execStartStream = null;
 		try {
 			dockerClient = slaveNode.getDockerCloud().buildDockerClient();
-			final String additionalSlaveOptions = "";
-			final String slaveOptions = "-jnlpUrl " + getSlaveJnlpUrl(computer) + " -secret " + getSlaveSecret(computer) + " " + additionalSlaveOptions;
+			final boolean disableSslVerification = System.getProperties().containsKey("docker.launcher.slave.disablesslverification");
+			final String slaveOptions = "-jnlpUrl " + getSlaveJnlpUrl(computer) + " -secret " + getSlaveSecret(computer) + (disableSslVerification ? SLAVE_JAR_DISABLE_SSL_VERIFICATION : "");
 			final String[] command = new String[] {"sh", "-c", "curl -o slave.jar " + getSlaveJarUrl() + " && java -jar slave.jar " + slaveOptions};
 			
 			final ExecCreateParam[] params;
