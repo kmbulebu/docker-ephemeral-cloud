@@ -2,10 +2,15 @@ package com.github.kmbulebu.jenkins.plugins.dockercloud;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.jenkinsci.plugins.durabletask.executors.OnceRetentionStrategy;
+import org.jvnet.localizer.Localizable;
+import org.jvnet.localizer.ResourceBundleHolder;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -20,6 +25,7 @@ import hudson.model.TaskListener;
 import hudson.model.Descriptor.FormException;
 import hudson.slaves.AbstractCloudSlave;
 import hudson.slaves.NodeProperty;
+import hudson.slaves.OfflineCause;
 
 /**
  * Docker cloud provider.
@@ -29,6 +35,8 @@ import hudson.slaves.NodeProperty;
 public class DockerSlave extends AbstractCloudSlave {
 
 	private static final Logger LOGGER = Logger.getLogger(DockerSlave.class.getName());
+	
+	private static final ResourceBundleHolder HOLDER = ResourceBundleHolder.get(Messages.class);
 
 	/**
 	 * Track the container id so that it can be deleted by id later.
@@ -69,6 +77,13 @@ public class DockerSlave extends AbstractCloudSlave {
 
 	@Override
 	protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
+		try {
+			getComputer().disconnect(OfflineCause.create(new Localizable(HOLDER, "offline"))).get(5, TimeUnit.MINUTES);
+		} catch (ExecutionException e1) {
+			LOGGER.log(Level.WARNING, "Failed to gracefully disconnect from slave running on container  " + dockerId, e1);
+		} catch (TimeoutException e1) {
+			LOGGER.log(Level.WARNING, "Timed out waiting for graceful disconnect from slave running on container " + dockerId, e1);
+		}
 		if (dockerId == null) {
 			listener.getLogger().println("No container id exists to remove.");
 		} else {

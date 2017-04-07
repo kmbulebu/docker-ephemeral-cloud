@@ -1,8 +1,6 @@
 package com.github.kmbulebu.jenkins.plugins.dockercloud;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.logging.Logger;
 
 import com.spotify.docker.client.DockerClient;
@@ -10,6 +8,7 @@ import com.spotify.docker.client.exceptions.ImageNotFoundException;
 import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
 import com.spotify.docker.client.messages.HostConfig;
+import com.spotify.docker.client.messages.ImageInfo;
 
 import hudson.model.Node;
 
@@ -63,11 +62,19 @@ public class CreateContainerCallable extends DockerClientCallable<Node> {
 			LOGGER.info("Finished pulling image " + dockerImage.getDockerImageName() + ".");
 		} 
 
+		final ImageInfo imageInfo = dockerClient.inspectImage(dockerImage.getDockerImageName());
+		final String imageUser = imageInfo.config().user();
+		
+		
 		final ContainerConfig.Builder containerConfigBuilder = ContainerConfig.builder().image(dockerImage.getDockerImageName());
 		final HostConfig.Builder hostConfigBuilder = HostConfig.builder();
 		
-		LOGGER.fine("Setting cmd to 'cat' with a pseudo tty.");
-		containerConfigBuilder.tty(true).cmd(new String[] {"cat"});
+		LOGGER.fine("Setting cmd to 'cat'.");
+		//containerConfigBuilder.user("root");
+		containerConfigBuilder.attachStderr(true).attachStdout(true).tty(true);
+		//containerConfigBuilder.tty(true).cmd(new String[] {"sh","-c","mkfifo /jenkins-out && chmod a+w /jenkins-out && tail -f /jenkins-out"});
+		containerConfigBuilder.cmd(new String[] {"cat"});
+		
 		
 		// Set CPU shares. Hopefully this won't be a problem on any exotic Docker platforms.
 		hostConfigBuilder.cpuShares(dockerImage.getCpuShares());
@@ -97,6 +104,8 @@ public class CreateContainerCallable extends DockerClientCallable<Node> {
 		labelsBuilder.imageName(dockerImage.getName());
 		labelsBuilder.labelString(dockerImage.getLabelString());
 		containerConfigBuilder.labels(labelsBuilder.build());
+		
+		
 		
 		
 		// Set privileged if requested.
@@ -129,7 +138,11 @@ public class CreateContainerCallable extends DockerClientCallable<Node> {
 		if (dockerImage.getUserOverride() != null && dockerImage.getUserOverride().trim().length() > 0) {
 			LOGGER.info("Setting user to '" + dockerImage.getUserOverride() + "' for container.");
 			execUser = dockerImage.getUserOverride();
+		} else if (imageUser != null && imageUser.trim().length() > 0) {
+			// Use the user embedded in image.
+			execUser = imageUser.trim();
 		} else {
+			// Do not specify (usually root)
 			execUser = null;
 		}
 		
